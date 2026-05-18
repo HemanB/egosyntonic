@@ -57,7 +57,9 @@ jobs:
       - name: Build image (no push yet)
         uses: docker/build-push-action@v6
         with:
-          context: ./backend
+          # Build context is repo root so the Dockerfile can include shared/.
+          context: .
+          file: ./backend/Dockerfile
           push: false
           tags: egosyntonic-reasoning:${{ github.sha }}
           cache-from: type=gha

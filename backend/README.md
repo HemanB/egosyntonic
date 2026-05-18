@@ -47,10 +47,28 @@ uv run pyright
 
 ## Runtime modes
 
-- **`fixture`** (default for dev + CI): no external calls, deterministic stubs. Pipeline wiring is testable without a Gemini key or a GCP project.
-- **`live`**: real Gemini + Vertex + Firestore. Requires `gcloud auth application-default login` and a project with billing enabled.
+Toggled by `EGOSYN_RUNTIME_MODE`:
 
-Toggled by `EGOSYN_RUNTIME_MODE`.
+- **`fixture`** (default): no external calls, deterministic stubs. Tests + CI run here.
+- **`live_llm`**: real Gemini calls; retrieval + state stay in-memory. No GCP needed. **This is the mode for testing CoT quality before the GCP project lands.** Just put `GEMINI_API_KEY=...` and `EGOSYN_RUNTIME_MODE=live_llm` in `.env.local`.
+- **`live`**: full GCP — Gemini + Vertex Vector Search + Firestore. Requires `gcloud auth application-default login`, a project with billing, and a populated Secret Manager entry.
+
+`.env.local` is loaded after `.env` with higher precedence — keep personal overrides (API keys, project IDs) there.
+
+## Running a live-LLM smoke turn
+
+```sh
+# .env.local must contain:
+#   EGOSYN_RUNTIME_MODE=live_llm
+#   GEMINI_API_KEY=<your rotated key>
+
+cd backend
+uv run python -m reasoning.eval.smoke_live "I'm not sure how to feel about today."
+uv run python -m reasoning.eval.smoke_live "How many calories should I eat?"  # expect safety template
+uv run python -m reasoning.eval.smoke_live "I want to die." --json            # full plan + critic
+```
+
+This is the fastest way to hand-validate the prompts before the eval harness runs against the full golden fixture set.
 
 ## Status
 

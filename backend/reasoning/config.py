@@ -10,13 +10,16 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
 class RuntimeMode(str, Enum):
-    fixture = "fixture"
-    live = "live"
+    fixture = "fixture"            # everything deterministic, no external calls
+    live_llm = "live_llm"          # real Gemini calls; retrieval + state stay in-memory
+    live = "live"                  # full GCP integration (Vertex Vector Search + Firestore)
 
 
 class Settings(BaseSettings):
     model_config = SettingsConfigDict(
-        env_file=".env",
+        # Load .env first, then .env.local override.
+        # pydantic-settings reads later files with higher precedence.
+        env_file=(".env", ".env.local"),
         env_prefix="",
         extra="ignore",
         case_sensitive=False,
@@ -46,6 +49,16 @@ class Settings(BaseSettings):
     @property
     def is_fixture(self) -> bool:
         return self.runtime_mode == RuntimeMode.fixture
+
+    @property
+    def llm_is_live(self) -> bool:
+        """True for both live_llm and live modes — i.e. real Gemini calls."""
+        return self.runtime_mode in (RuntimeMode.live_llm, RuntimeMode.live)
+
+    @property
+    def storage_is_live(self) -> bool:
+        """True only for full live mode — Firestore + Vertex Vector Search."""
+        return self.runtime_mode == RuntimeMode.live
 
 
 @lru_cache(maxsize=1)
