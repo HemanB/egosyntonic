@@ -1,0 +1,7 @@
+project_id  = "egosyntonic-prod"
+env         = "prod"
+region      = "us-central1"
+github_org  = "HemanB"
+github_repo = "egosyntonic"
+
+container_image = ""

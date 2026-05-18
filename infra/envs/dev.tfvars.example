@@ -1,0 +1,9 @@
+project_id  = "egosyntonic-dev"
+env         = "dev"
+region      = "us-central1"
+github_org  = "HemanB"
+github_repo = "egosyntonic"
+
+# Leave empty for first apply — Cloud Run deploys a placeholder image
+# until CI publishes the real one.
+container_image = ""
