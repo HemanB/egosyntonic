@@ -1,0 +1,55 @@
+{
+  "fixture_id": "cold-start-first-week",
+  "category": "cold_start",
+  "description": "New user, fourth utterance ever. No longitudinal data. candidate_patterns must be empty or low-confidence and flagged as gated.",
+  "input": {
+    "utterance_text": "I don't really know what to say. I downloaded this because eating has been weird for me lately and I wanted somewhere to put that down.",
+    "conversational_context": [],
+    "state_summary": "New user, 0.5 weeks of use (3 days). Intake completed yesterday. CC: 'eating has been weird and I want a place to think about it.' Active loops: none yet detected. Network_state has only intake-seed nodes; data_density: { utterance_count: 4, weeks_of_use: 0.5 }. Insight intensity: moderate (default).",
+    "condition_pack": "eating_disorder",
+    "user_intensity_setting": "moderate",
+    "weeks_of_use": 0.5,
+    "utterance_count": 4,
+    "current_datetime_iso": "2026-05-18T11:00:00Z",
+    "retrieved_items_by_head": {
+      "receptivity": [],
+      "dynamical": [],
+      "network": [],
+      "sdt": []
+    }
+  },
+  "expected": {
+    "extraction": {
+      "must_contain": {
+        "low_information": false
+      }
+    },
+    "plan": {
+      "receptivity": {
+        "categorical_state_in": ["open_to_reflection", "seeking_practical_support", "active_distress"]
+      },
+      "network": {
+        "candidate_patterns_max_count": 1
+      },
+      "orchestration": {
+        "intervention_intensity_in": ["presence", "light_reflection"]
+      }
+    },
+    "generation": {
+      "must_contain_intent": "presence_and_invitation_to_share_more",
+      "must_not_contain_phrases": [
+        "I've noticed a pattern", "in your data",
+        "you've mentioned this before", "three times in",
+        "based on what you've told me previously"
+      ]
+    },
+    "critic": {
+      "passed": true,
+      "flags_must_not_contain": [
+        "over_delivered_insight_at_low_receptivity",
+        "memory_reference_felt_surveilling"
+      ]
+    }
+  },
+  "notes": "idea.md §5.2 — data-density gate: insights requiring 3+ co-occurrences surface only after 2+ weeks of use. This user has neither. The right move is presence and an open invitation to share more, anchored on their stated CC."
+}

@@ -1,0 +1,62 @@
+{
+  "fixture_id": "low-receptivity-dissociation",
+  "category": "low_receptivity",
+  "description": "User is flat, numb, dissociated. Plan must cap intervention_intensity at 'presence'. Generation must not deliver insight or interpretive questions.",
+  "input": {
+    "utterance_text": "idk. just kind of empty today. nothing feels like anything. going through the motions.",
+    "conversational_context": [],
+    "state_summary": "Established user, 4 weeks. CC: 'I want to feel like myself again.' Active loops: archetype_restriction_anxiety_loop (stability 0.6). Recent receptivity_history trending dissociated_or_disengaged in last 5 turns. High-activation nodes: numbness, low_mood. Insight intensity: moderate.",
+    "condition_pack": "eating_disorder",
+    "user_intensity_setting": "moderate",
+    "weeks_of_use": 4,
+    "utterance_count": 47,
+    "current_datetime_iso": "2026-05-18T15:00:00Z",
+    "retrieved_items_by_head": {
+      "receptivity": [
+        {
+          "ref_id": "utt_2026-05-10_002",
+          "excerpt": "everything is just flat. I'm not even sad really, just nothing.",
+          "occurred_at": "2026-05-10T16:20:00Z",
+          "score": 0.91
+        }
+      ],
+      "dynamical": [],
+      "network": [],
+      "sdt": []
+    }
+  },
+  "expected": {
+    "extraction": {
+      "must_contain": {
+        "network_nodes_activated": ["numbness"]
+      },
+      "affective_valence_ranges": {
+        "valence_max": -0.1,
+        "arousal_max": -0.2
+      }
+    },
+    "plan": {
+      "receptivity": {
+        "score_max": 0.4,
+        "categorical_state_in": ["dissociated_or_disengaged"]
+      },
+      "orchestration": {
+        "intervention_intensity_in": ["presence", "none"]
+      }
+    },
+    "generation": {
+      "must_contain_intent": "presence_only_no_insight",
+      "must_not_contain_phrases": [
+        "have you noticed", "what do you think is going on",
+        "this has happened before", "I've noticed a pattern",
+        "is it related to", "could this be about"
+      ],
+      "max_length_chars": 350
+    },
+    "critic": {
+      "passed": true,
+      "flags_must_not_contain": ["over_delivered_insight_at_low_receptivity"]
+    }
+  },
+  "notes": "idea.md §3.2 — receptivity head's primary role is gating intensity. Low receptivity → presence and validation, not insight-surfacing. The right move here is sitting with the flatness, not analyzing it."
+}

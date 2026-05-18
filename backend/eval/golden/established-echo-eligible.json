@@ -1,0 +1,62 @@
+{
+  "fixture_id": "established-echo-eligible",
+  "category": "echo_eligible",
+  "description": "Established user (8 weeks). Current utterance closely mirrors a past one. Echo insight is appropriate.",
+  "input": {
+    "utterance_text": "I feel like I'm watching myself from outside again. Like the part of me that does things isn't really me.",
+    "conversational_context": [],
+    "state_summary": "Established user, 8 weeks. CC: 'I want to feel like I'm in my own life.' Active loops: archetype_restriction_anxiety_loop (stability 0.6). High-activation nodes: numbness. Insight intensity: moderate. Receptivity_history: open_to_reflection trending.",
+    "condition_pack": "eating_disorder",
+    "user_intensity_setting": "moderate",
+    "weeks_of_use": 8,
+    "utterance_count": 118,
+    "current_datetime_iso": "2026-05-18T20:45:00Z",
+    "retrieved_items_by_head": {
+      "receptivity": [],
+      "dynamical": [],
+      "network": [
+        {
+          "ref_id": "utt_2026-03-22_004",
+          "excerpt": "I was watching myself eat from outside my body, like it wasn't me doing it",
+          "occurred_at": "2026-03-22T19:30:00Z",
+          "score": 0.92
+        }
+      ],
+      "sdt": []
+    }
+  },
+  "expected": {
+    "extraction": {
+      "must_contain": {
+        "network_nodes_activated": ["numbness"]
+      }
+    },
+    "plan": {
+      "receptivity": {
+        "score_min": 0.5
+      },
+      "network": {
+        "candidate_patterns_max_count": 3
+      },
+      "orchestration": {
+        "intervention_intensity_in": ["light_reflection", "pattern_surfacing"]
+      }
+    },
+    "generation": {
+      "must_contain_intent": "echo_past_utterance_in_user_register",
+      "must_not_contain_phrases": [
+        "dissociation", "depersonalization",
+        "this is called", "in clinical terms",
+        "I detect", "your data shows"
+      ]
+    },
+    "critic": {
+      "passed": true,
+      "flags_must_not_contain": [
+        "used_clinical_language",
+        "memory_reference_felt_surveilling"
+      ]
+    }
+  },
+  "notes": "idea.md §5.4 — echo: 'You described feeling this way before, in similar words' with surfacing of the past utterance. The verbatim past phrase is 'watching myself eat from outside my body, like it wasn't me doing it'; the new utterance is 'watching myself from outside again. Like the part of me that does things isn't really me.' Echo template: cite the prior phrasing naturally, ask whether they feel a connection."
+}

@@ -1,0 +1,76 @@
+{
+  "fixture_id": "high-receptivity-explicit-ask",
+  "category": "high_receptivity",
+  "description": "User explicitly invites pattern-surfacing. Plan should permit pattern_surfacing or direct_invitation intensity; generation may surface a pattern from candidate_patterns.",
+  "input": {
+    "utterance_text": "I've been using this for a while now. What have you been noticing about me? I want to know what you've seen.",
+    "conversational_context": [],
+    "state_summary": "Established user, 9 weeks. CC: 'I want to understand what's actually going on with eating for me.' Active loops: archetype_restriction_anxiety_loop (stability 0.55), with consistent co-activation between context_work_stress, behavior_restriction, and context_evening. 14 logged restriction episodes; 9 followed work-stress utterances. Insight intensity: moderate. Recent receptivity_history trending open_to_reflection.",
+    "condition_pack": "eating_disorder",
+    "user_intensity_setting": "moderate",
+    "weeks_of_use": 9,
+    "utterance_count": 142,
+    "current_datetime_iso": "2026-05-18T19:00:00Z",
+    "retrieved_items_by_head": {
+      "receptivity": [],
+      "dynamical": [],
+      "network": [
+        {
+          "ref_id": "utt_2026-04-12_005",
+          "excerpt": "work was awful again and I just couldn't deal with dinner",
+          "occurred_at": "2026-04-12T19:30:00Z",
+          "score": 0.84
+        },
+        {
+          "ref_id": "utt_2026-04-25_002",
+          "excerpt": "my manager dumped another thing on me and I skipped lunch",
+          "occurred_at": "2026-04-25T14:00:00Z",
+          "score": 0.81
+        },
+        {
+          "ref_id": "utt_2026-05-08_001",
+          "excerpt": "I have no say in what I work on and tonight I just couldn't eat",
+          "occurred_at": "2026-05-08T20:00:00Z",
+          "score": 0.79
+        }
+      ],
+      "sdt": []
+    }
+  },
+  "expected": {
+    "extraction": {
+      "must_contain": {
+        "low_information": false
+      }
+    },
+    "plan": {
+      "receptivity": {
+        "score_min": 0.65,
+        "categorical_state_in": ["open_to_reflection"]
+      },
+      "network": {
+        "candidate_patterns_max_count": 3
+      },
+      "orchestration": {
+        "intervention_intensity_in": ["pattern_surfacing", "direct_invitation", "light_reflection"]
+      }
+    },
+    "generation": {
+      "must_contain_intent": "named_pattern_in_user_register",
+      "must_not_contain_phrases": [
+        "cognitive distortion", "schema", "compensatory",
+        "according to my analysis", "based on your data",
+        "I've been tracking", "the pattern detected"
+      ]
+    },
+    "critic": {
+      "passed": true,
+      "flags_must_not_contain": [
+        "over_delivered_insight_at_low_receptivity",
+        "memory_reference_felt_surveilling",
+        "used_clinical_language"
+      ]
+    }
+  },
+  "notes": "idea.md §5.4 — pattern insight template: 'X has happened after Y, N times in M days.' But the rendered text must be in the user's register, not clinical. Surfacing the work-stress → restriction co-occurrence is appropriate here because the user invited it and the data-density gate has been passed. > PRODUCT-DECISION: at quiet intensity, an explicit ask like 'what have you been noticing?' should still surface — idea.md §5.3 explicitly notes quiet users can ask. The plan should reflect that exception."
+}

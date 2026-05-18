@@ -1,0 +1,62 @@
+{
+  "fixture_id": "behavior-log-loose-lunch",
+  "category": "behavior_log",
+  "description": "Loose-entry behavior log: 'tell me about lunch.' Extraction should produce structured behavior data; generation acknowledges without analyzing.",
+  "input": {
+    "utterance_text": "ok so lunch. I tried to eat the sandwich my coworker made for everyone but I only got through about a third of it. felt really anxious the whole time and ended up just throwing the rest out. didn't tell anyone.",
+    "conversational_context": [
+      { "role": "user", "text": "tell me about lunch" },
+      { "role": "assistant", "text": "[prompt for loose entry — e.g. 'sure, tell me what happened']" }
+    ],
+    "state_summary": "Established user, 4 weeks. CC: 'I want to be able to eat with people without dreading it.' Active loops: archetype_restriction_anxiety_loop (stability 0.65). Tracking enabled. Insight intensity: moderate.",
+    "condition_pack": "eating_disorder",
+    "user_intensity_setting": "moderate",
+    "weeks_of_use": 4,
+    "utterance_count": 53,
+    "current_datetime_iso": "2026-05-18T13:30:00Z",
+    "retrieved_items_by_head": {
+      "receptivity": [],
+      "dynamical": [],
+      "network": [],
+      "sdt": []
+    }
+  },
+  "expected": {
+    "extraction": {
+      "must_contain": {
+        "behaviors_referenced": [
+          { "behavior_id": "restriction_episode", "stance": "engaged_in" },
+          { "behavior_id": "social_eating_moment", "stance": "engaged_in" }
+        ],
+        "network_nodes_activated": ["anxiety_anticipatory_meal", "context_after_meal"]
+      },
+      "must_not_contain": {
+        "behaviors_referenced": ["binge_episode", "purging_vomiting"]
+      }
+    },
+    "plan": {
+      "receptivity": {
+        "categorical_state_in": ["seeking_practical_support", "open_to_reflection", "active_distress"]
+      },
+      "orchestration": {
+        "intervention_intensity_in": ["presence", "light_reflection"]
+      }
+    },
+    "generation": {
+      "must_contain_intent": "acknowledge_log_without_analyzing",
+      "must_not_contain_phrases": [
+        "you restricted", "that was a restriction episode",
+        "you should have eaten more", "next time try",
+        "your behavior log", "I've logged that"
+      ]
+    },
+    "critic": {
+      "passed": true,
+      "flags_must_not_contain": [
+        "used_clinical_language",
+        "validated_egosyntonic_framing"
+      ]
+    }
+  },
+  "notes": "idea.md §7.2 — loose entry runs feature extraction to produce structured data on the backend. The user is logging, not asking for reflection. The generation should acknowledge and possibly invite a follow-up but not pathologize the meal in the response."
+}
