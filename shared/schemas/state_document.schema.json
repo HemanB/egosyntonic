@@ -1,0 +1,278 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://egosyntonic.app/schemas/state_document.schema.json",
+  "title": "StateDocument",
+  "description": "Per-user longitudinal state document. The spine of the reasoning pipeline. Maintained per user, read on every turn, updated after every turn. See idea.md §3.5.",
+  "type": "object",
+  "required": [
+    "schema_version",
+    "user_id",
+    "created_at",
+    "updated_at",
+    "stated_chief_complaint",
+    "network_state",
+    "need_state_model",
+    "receptivity_history",
+    "active_loops",
+    "insight_surface_state",
+    "safety_state",
+    "user_preferences"
+  ],
+  "properties": {
+    "schema_version": {
+      "type": "string",
+      "const": "1.0.0",
+      "description": "Locked at v1. Schema changes are migrations."
+    },
+    "user_id": {
+      "type": "string",
+      "description": "Firebase Auth UID. Partition key for all downstream data."
+    },
+    "created_at": { "type": "string", "format": "date-time" },
+    "updated_at": { "type": "string", "format": "date-time" },
+    "intake_completed_at": {
+      "type": ["string", "null"],
+      "format": "date-time",
+      "description": "Null until intake flow completes. Reasoning operates differently pre-intake-completion."
+    },
+    "condition_pack": {
+      "type": "string",
+      "description": "Which controlled vocabularies and intake-seed priors are active for this user. v1 ships 'eating_disorder' only; future packs extend without schema change.",
+      "enum": ["eating_disorder", "general_egosyntonic"]
+    },
+
+    "stated_chief_complaint": {
+      "type": "object",
+      "description": "User-stated, user-editable. Anchors initial insight surface (idea.md §5.2). Tracked separately from the system's evolving model.",
+      "required": ["text", "stated_at"],
+      "properties": {
+        "text": { "type": "string", "maxLength": 2000 },
+        "stated_at": { "type": "string", "format": "date-time" },
+        "edit_history": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": ["text", "edited_at"],
+            "properties": {
+              "text": { "type": "string", "maxLength": 2000 },
+              "edited_at": { "type": "string", "format": "date-time" }
+            }
+          }
+        }
+      }
+    },
+
+    "intake_baseline": {
+      "type": "object",
+      "description": "Validated short-form instrument scores from intake. Stored but not user-facing as scores in v1 (idea.md §6.1).",
+      "properties": {
+        "ede_qs": { "type": ["number", "null"], "description": "EDE-QS short form total (eating disorder pack)." },
+        "panas_pa": { "type": ["number", "null"], "description": "PANAS positive affect." },
+        "panas_na": { "type": ["number", "null"], "description": "PANAS negative affect." },
+        "sdt_need_satisfaction": {
+          "type": "object",
+          "description": "Brief SDT need satisfaction items per life domain.",
+          "additionalProperties": { "type": "number", "minimum": 0, "maximum": 1 }
+        },
+        "captured_at": { "type": ["string", "null"], "format": "date-time" }
+      }
+    },
+
+    "network_state": {
+      "type": "object",
+      "description": "User's individualized symptom network. Graph of nodes (experiences, behaviors, cognitions) with co-activation and recency-decayed edge weights. See idea.md §2 (network theory), §3.5.",
+      "required": ["nodes", "edges", "last_updated"],
+      "properties": {
+        "nodes": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": ["node_id", "label", "activation_weight"],
+            "properties": {
+              "node_id": { "type": "string", "description": "Vocabulary key from shared/vocabularies/network_nodes.json" },
+              "label": { "type": "string" },
+              "activation_weight": { "type": "number", "minimum": 0, "maximum": 1, "description": "Recency-decayed activation level." },
+              "last_active_at": { "type": ["string", "null"], "format": "date-time" }
+            }
+          }
+        },
+        "edges": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": ["from", "to", "weight"],
+            "properties": {
+              "from": { "type": "string" },
+              "to": { "type": "string" },
+              "weight": { "type": "number", "minimum": 0, "maximum": 1, "description": "Co-activation strength, recency-decayed." },
+              "co_occurrences": { "type": "integer", "minimum": 0 },
+              "last_co_active_at": { "type": ["string", "null"], "format": "date-time" }
+            }
+          }
+        },
+        "last_updated": { "type": "string", "format": "date-time" },
+        "data_density": {
+          "type": "object",
+          "description": "Used to gate graduated insights (idea.md §5.2: 3+ co-occurrences AND 2+ weeks of use).",
+          "required": ["utterance_count", "weeks_of_use"],
+          "properties": {
+            "utterance_count": { "type": "integer", "minimum": 0 },
+            "weeks_of_use": { "type": "number", "minimum": 0 }
+          }
+        }
+      }
+    },
+
+    "need_state_model": {
+      "type": "object",
+      "description": "Per-domain SDT assessments. Updates slowly. See idea.md §3.2 (SDT head), §3.5.",
+      "additionalProperties": {
+        "type": "object",
+        "required": ["thwarted_needs", "confidence"],
+        "properties": {
+          "thwarted_needs": {
+            "type": "array",
+            "items": { "type": "string", "enum": ["autonomy", "competence", "relatedness"] }
+          },
+          "substitute_behaviors": {
+            "type": "array",
+            "description": "Behavior IDs (from vocabularies) that appear to substitute for the thwarted need in this domain.",
+            "items": { "type": "string" }
+          },
+          "confidence": { "type": "number", "minimum": 0, "maximum": 1 },
+          "last_updated": { "type": "string", "format": "date-time" }
+        }
+      }
+    },
+
+    "receptivity_history": {
+      "type": "array",
+      "description": "Rolling window of receptivity assessments. Used to detect trends (idea.md §3.2 receptivity head, §3.5).",
+      "maxItems": 50,
+      "items": {
+        "type": "object",
+        "required": ["turn_id", "score", "categorical_state", "assessed_at"],
+        "properties": {
+          "turn_id": { "type": "string" },
+          "score": { "type": "number", "minimum": 0, "maximum": 1 },
+          "categorical_state": {
+            "type": "string",
+            "enum": ["open_to_reflection", "active_distress", "crisis", "dissociated_or_disengaged", "seeking_practical_support"]
+          },
+          "actionability": { "type": "boolean" },
+          "assessed_at": { "type": "string", "format": "date-time" }
+        }
+      }
+    },
+
+    "active_loops": {
+      "type": "array",
+      "description": "Currently-active dynamical-systems loops with stability estimates (idea.md §3.2 dynamical state head).",
+      "items": {
+        "type": "object",
+        "required": ["loop_id", "label", "stability", "first_detected_at"],
+        "properties": {
+          "loop_id": { "type": "string" },
+          "label": { "type": "string", "description": "Human-readable. Derived from user data or clinical-archetype fallback for new users." },
+          "stability": { "type": "number", "minimum": 0, "maximum": 1, "description": "Higher = more locked-in; lower = near transition." },
+          "first_detected_at": { "type": "string", "format": "date-time" },
+          "last_active_at": { "type": ["string", "null"], "format": "date-time" },
+          "transition_signals": {
+            "type": "array",
+            "items": { "type": "string" }
+          }
+        }
+      }
+    },
+
+    "insight_surface_state": {
+      "type": "object",
+      "description": "Which insights have been shown, when, and with what response (idea.md §5).",
+      "required": ["surfaced_insights"],
+      "properties": {
+        "surfaced_insights": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": ["insight_id", "surfaced_at", "user_response"],
+            "properties": {
+              "insight_id": { "type": "string" },
+              "surfaced_at": { "type": "string", "format": "date-time" },
+              "user_response": {
+                "type": "string",
+                "enum": ["tap", "dismiss", "correct", "ignore", "pending"]
+              },
+              "correction_note": { "type": ["string", "null"] }
+            }
+          }
+        }
+      }
+    },
+
+    "safety_state": {
+      "type": "object",
+      "description": "Active safety flags. Mutates the reasoning pipeline's posture (idea.md §6.4, §9).",
+      "required": ["active_flags"],
+      "properties": {
+        "active_flags": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "enum": [
+              "active_suicidal_ideation",
+              "self_harm_intent",
+              "medical_instability",
+              "acute_refeeding_risk",
+              "severe_restriction",
+              "syncope_history",
+              "purging_blood",
+              "external_supervision_active"
+            ]
+          }
+        },
+        "crisis_history": {
+          "type": "array",
+          "description": "References to past crisis-flagged turns. Persist across sessions.",
+          "items": {
+            "type": "object",
+            "required": ["turn_id", "flagged_at", "category"],
+            "properties": {
+              "turn_id": { "type": "string" },
+              "flagged_at": { "type": "string", "format": "date-time" },
+              "category": { "type": "string" },
+              "template_used": { "type": "string" }
+            }
+          }
+        },
+        "intake_safety_screen": {
+          "type": "object",
+          "description": "Results of intake safety screening (idea.md §6.4).",
+          "properties": {
+            "screened_at": { "type": ["string", "null"], "format": "date-time" },
+            "active_si_at_intake": { "type": "boolean" },
+            "medical_instability_at_intake": { "type": "boolean" }
+          }
+        }
+      }
+    },
+
+    "user_preferences": {
+      "type": "object",
+      "description": "User-controllable settings (idea.md §5.3, §7, §10).",
+      "required": ["insight_intensity"],
+      "properties": {
+        "insight_intensity": {
+          "type": "string",
+          "enum": ["quiet", "moderate", "active"],
+          "default": "moderate",
+          "description": "Quiet: only when asked. Moderate (default): high-confidence at high-receptivity. Active: moderate-confidence more often."
+        },
+        "tracking_enabled": { "type": "boolean", "default": true },
+        "communication_preferences": {
+          "type": "object",
+          "additionalProperties": { "type": ["string", "boolean", "number"] }
+        }
+      }
+    }
+  }
+}

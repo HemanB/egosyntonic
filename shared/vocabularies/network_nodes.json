@@ -1,0 +1,97 @@
+{
+  "schema_version": "1.0.0",
+  "description": "Controlled vocabulary of network nodes for the symptom-network head (idea.md §2 'symptom network structure', §3.2 network head). Each node represents an experience, behavior, cognition, or contextual marker that can causally trigger others in the user's individualized network. v1 ships eating_disorder pack; future condition packs extend without schema change.",
+  "node_kinds": {
+    "affective": "An affective state or emotion-adjacent experience.",
+    "cognitive": "A thought pattern, belief, or cognitive distortion.",
+    "behavioral": "An observable behavior. Often maps to a behaviors.json entry.",
+    "interoceptive": "A bodily sensation or interoceptive experience.",
+    "contextual": "A situational or environmental trigger.",
+    "social": "A social or relational experience."
+  },
+  "packs": {
+    "eating_disorder": {
+      "label": "Eating disorder",
+      "nodes": [
+        { "id": "anxiety_general", "label": "Anxiety", "kind": "affective" },
+        { "id": "anxiety_anticipatory_meal", "label": "Anticipatory anxiety about a meal", "kind": "affective" },
+        { "id": "anxiety_anticipatory_social", "label": "Anticipatory anxiety about a social event", "kind": "affective" },
+        { "id": "shame_body", "label": "Shame about body", "kind": "affective" },
+        { "id": "shame_eating", "label": "Shame about eating", "kind": "affective" },
+        { "id": "guilt_eating", "label": "Guilt after eating", "kind": "affective" },
+        { "id": "pride_restriction", "label": "Pride or accomplishment in restriction", "kind": "affective", "egosyntonic": true },
+        { "id": "pride_control", "label": "Pride in self-control", "kind": "affective", "egosyntonic": true },
+        { "id": "fear_weight_gain", "label": "Fear of weight gain", "kind": "affective" },
+        { "id": "fear_loss_of_control", "label": "Fear of losing control around food", "kind": "affective" },
+        { "id": "numbness", "label": "Numbness or emotional flatness", "kind": "affective" },
+        { "id": "loneliness", "label": "Loneliness", "kind": "affective" },
+        { "id": "low_mood", "label": "Low mood", "kind": "affective" },
+
+        { "id": "cognition_all_or_nothing_eating", "label": "All-or-nothing thinking about eating", "kind": "cognitive" },
+        { "id": "cognition_food_moralization", "label": "Moralization of foods as good/bad", "kind": "cognitive" },
+        { "id": "cognition_body_as_measure", "label": "Body as measure of self-worth", "kind": "cognitive" },
+        { "id": "cognition_thinness_as_safety", "label": "Thinness as safety", "kind": "cognitive", "egosyntonic": true },
+        { "id": "cognition_eating_as_failure", "label": "Eating as failure", "kind": "cognitive" },
+        { "id": "cognition_rules_as_identity", "label": "Food rules as part of identity", "kind": "cognitive", "egosyntonic": true },
+
+        { "id": "behavior_restriction", "label": "Restriction (behavior)", "kind": "behavioral", "behavior_ref": "restriction_episode" },
+        { "id": "behavior_binge", "label": "Binge (behavior)", "kind": "behavioral", "behavior_ref": "binge_episode" },
+        { "id": "behavior_purge", "label": "Purge (behavior, any modality)", "kind": "behavioral" },
+        { "id": "behavior_compulsive_exercise", "label": "Compulsive exercise (behavior)", "kind": "behavioral", "behavior_ref": "compulsive_exercise" },
+        { "id": "behavior_body_checking", "label": "Body checking (behavior)", "kind": "behavioral", "behavior_ref": "body_checking" },
+        { "id": "behavior_weight_checking", "label": "Weight checking (behavior)", "kind": "behavioral", "behavior_ref": "weight_checking" },
+        { "id": "behavior_avoidance_food_situation", "label": "Avoidance of food situation", "kind": "behavioral", "behavior_ref": "avoidance_of_food_situation" },
+
+        { "id": "interoceptive_hunger", "label": "Hunger", "kind": "interoceptive" },
+        { "id": "interoceptive_fullness", "label": "Fullness", "kind": "interoceptive" },
+        { "id": "interoceptive_dizziness", "label": "Dizziness or lightheadedness", "kind": "interoceptive" },
+        { "id": "interoceptive_cold", "label": "Feeling cold", "kind": "interoceptive" },
+        { "id": "interoceptive_fatigue", "label": "Fatigue", "kind": "interoceptive" },
+
+        { "id": "context_meal_approaching", "label": "Meal approaching", "kind": "contextual" },
+        { "id": "context_after_meal", "label": "After a meal", "kind": "contextual" },
+        { "id": "context_evening", "label": "Evening", "kind": "contextual" },
+        { "id": "context_alone", "label": "Alone", "kind": "contextual" },
+        { "id": "context_work_stress", "label": "Work stress", "kind": "contextual" },
+        { "id": "context_family_meal", "label": "Family meal", "kind": "contextual" },
+
+        { "id": "social_conflict_partner", "label": "Conflict with partner", "kind": "social" },
+        { "id": "social_conflict_family", "label": "Conflict with family", "kind": "social" },
+        { "id": "social_isolation_event", "label": "Isolating from others", "kind": "social" },
+        { "id": "social_comparison_body", "label": "Body comparison with others", "kind": "social" }
+      ]
+    },
+
+    "general_egosyntonic": {
+      "label": "General egosyntonic (cross-condition)",
+      "nodes": [
+        { "id": "anxiety_general", "label": "Anxiety", "kind": "affective" },
+        { "id": "anxiety_anticipatory_general", "label": "Anticipatory anxiety", "kind": "affective" },
+        { "id": "shame_general", "label": "Shame", "kind": "affective" },
+        { "id": "pride_control_general", "label": "Pride in control or discipline", "kind": "affective", "egosyntonic": true },
+        { "id": "pride_competence_general", "label": "Pride in competence or productivity", "kind": "affective", "egosyntonic": true },
+        { "id": "fear_loss_of_control_general", "label": "Fear of losing control", "kind": "affective" },
+        { "id": "numbness_general", "label": "Numbness or emotional flatness", "kind": "affective" },
+        { "id": "loneliness_general", "label": "Loneliness", "kind": "affective" },
+
+        { "id": "cognition_rules_as_identity_general", "label": "Rules or routines as part of identity", "kind": "cognitive", "egosyntonic": true },
+        { "id": "cognition_perfectionism", "label": "Perfectionism", "kind": "cognitive", "egosyntonic": true },
+        { "id": "cognition_self_as_burden", "label": "Self as burden", "kind": "cognitive" },
+        { "id": "cognition_productivity_as_worth", "label": "Productivity as worth", "kind": "cognitive", "egosyntonic": true },
+
+        { "id": "behavior_compulsive_checking", "label": "Compulsive checking", "kind": "behavioral", "behavior_ref": "compulsive_checking" },
+        { "id": "behavior_reassurance_seeking", "label": "Reassurance seeking", "kind": "behavioral", "behavior_ref": "compulsive_reassurance_seeking" },
+        { "id": "behavior_overworking", "label": "Overworking", "kind": "behavioral", "behavior_ref": "overworking" },
+        { "id": "behavior_social_withdrawal", "label": "Social withdrawal", "kind": "behavioral", "behavior_ref": "social_withdrawal" },
+        { "id": "behavior_perfectionistic_redoing", "label": "Perfectionistic redoing", "kind": "behavioral", "behavior_ref": "perfectionistic_redoing" },
+
+        { "id": "context_evening_general", "label": "Evening", "kind": "contextual" },
+        { "id": "context_alone_general", "label": "Alone", "kind": "contextual" },
+        { "id": "context_work_stress_general", "label": "Work stress", "kind": "contextual" },
+
+        { "id": "social_conflict_general", "label": "Interpersonal conflict", "kind": "social" },
+        { "id": "social_isolation_event_general", "label": "Isolating from others", "kind": "social" }
+      ]
+    }
+  }
+}

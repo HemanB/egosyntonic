@@ -1,0 +1,153 @@
+{
+  "schema_version": "1.0.0",
+  "description": "Controlled vocabulary of behaviors the system can recognize and reason about. Maps onto network nodes for the network head. v1 ships eating_disorder pack; future condition packs extend without schema change. See idea.md §4.2, §7.3.",
+  "packs": {
+    "eating_disorder": {
+      "label": "Eating disorder",
+      "behaviors": [
+        {
+          "id": "restriction_episode",
+          "label": "Restriction episode",
+          "description": "Eating less than physically needed, skipping meals, restricting food groups or volume beyond medical guidance.",
+          "severity_class": "core_symptom",
+          "tracking_supported": true,
+          "trigger_warnings": ["food", "weight"]
+        },
+        {
+          "id": "binge_episode",
+          "label": "Binge episode",
+          "description": "Eating in a discrete period an amount of food larger than most would eat, with a sense of loss of control.",
+          "severity_class": "core_symptom",
+          "tracking_supported": true,
+          "trigger_warnings": ["food"]
+        },
+        {
+          "id": "purging_vomiting",
+          "label": "Purging — self-induced vomiting",
+          "description": "Self-induced vomiting as compensatory behavior.",
+          "severity_class": "high_acuity",
+          "tracking_supported": true,
+          "trigger_warnings": ["purging", "medical_risk"]
+        },
+        {
+          "id": "purging_laxatives",
+          "label": "Purging — laxative misuse",
+          "description": "Laxative use as compensatory behavior.",
+          "severity_class": "high_acuity",
+          "tracking_supported": true,
+          "trigger_warnings": ["purging", "medical_risk"]
+        },
+        {
+          "id": "purging_diuretics",
+          "label": "Purging — diuretic misuse",
+          "description": "Diuretic use as compensatory behavior.",
+          "severity_class": "high_acuity",
+          "tracking_supported": true,
+          "trigger_warnings": ["purging", "medical_risk"]
+        },
+        {
+          "id": "compulsive_exercise",
+          "label": "Compulsive exercise",
+          "description": "Exercise that feels driven, that the user feels unable to skip, or that is performed primarily to compensate for eating.",
+          "severity_class": "core_symptom",
+          "tracking_supported": true,
+          "trigger_warnings": ["exercise"]
+        },
+        {
+          "id": "body_checking",
+          "label": "Body checking",
+          "description": "Repeatedly examining specific body parts in mirrors, pinching, measuring, photographing, etc.",
+          "severity_class": "maintaining_behavior",
+          "tracking_supported": true,
+          "trigger_warnings": ["body"]
+        },
+        {
+          "id": "weight_checking",
+          "label": "Weight checking",
+          "description": "Self-weighing, particularly if frequent or context-bound (before/after meals, daily, etc.).",
+          "severity_class": "maintaining_behavior",
+          "tracking_supported": true,
+          "trigger_warnings": ["weight"]
+        },
+        {
+          "id": "food_rule_followed",
+          "label": "Food rule followed",
+          "description": "A self-imposed rule about what/when/how to eat that was followed in this episode.",
+          "severity_class": "maintaining_behavior",
+          "tracking_supported": true
+        },
+        {
+          "id": "food_rule_broken",
+          "label": "Food rule broken",
+          "description": "A self-imposed rule about what/when/how to eat that was broken in this episode. Stance often emotionally loaded.",
+          "severity_class": "maintaining_behavior",
+          "tracking_supported": true
+        },
+        {
+          "id": "social_eating_moment",
+          "label": "Social eating moment",
+          "description": "Eating with others, eating in public, or notably avoiding either.",
+          "severity_class": "contextual",
+          "tracking_supported": true
+        },
+        {
+          "id": "avoidance_of_food_situation",
+          "label": "Avoidance of food situation",
+          "description": "Declining or leaving a meal, gathering, or context involving food.",
+          "severity_class": "contextual",
+          "tracking_supported": true
+        },
+        {
+          "id": "fasting_extended",
+          "label": "Extended fasting",
+          "description": "Prolonged periods without intake. Distinct from a missed meal — refers to deliberate extended deprivation.",
+          "severity_class": "high_acuity",
+          "tracking_supported": true,
+          "trigger_warnings": ["food", "medical_risk"]
+        }
+      ]
+    },
+
+    "general_egosyntonic": {
+      "label": "General egosyntonic (cross-condition)",
+      "description": "Behaviors that may be valued by the person but cause harm or constrain life. For users whose condition pack is not eating-disorder-specific but for whom MI exploration of behavior function is useful.",
+      "behaviors": [
+        {
+          "id": "compulsive_checking",
+          "label": "Compulsive checking",
+          "description": "Repeated checking behaviors (locks, appliances, body, social media) that feel necessary but cause distress or take significant time.",
+          "severity_class": "maintaining_behavior",
+          "tracking_supported": true
+        },
+        {
+          "id": "compulsive_reassurance_seeking",
+          "label": "Compulsive reassurance seeking",
+          "description": "Repeatedly asking others for confirmation about a worry, with relief that does not last.",
+          "severity_class": "maintaining_behavior",
+          "tracking_supported": true
+        },
+        {
+          "id": "overworking",
+          "label": "Overworking",
+          "description": "Working beyond what is sustainable, framed by the user as productivity or dedication, with cost to rest/health/relationships.",
+          "severity_class": "maintaining_behavior",
+          "tracking_supported": true
+        },
+        {
+          "id": "social_withdrawal",
+          "label": "Social withdrawal",
+          "description": "Reducing contact with others, framed as needing space or independence, beyond what the user finds restorative.",
+          "severity_class": "maintaining_behavior",
+          "tracking_supported": true
+        },
+        {
+          "id": "perfectionistic_redoing",
+          "label": "Perfectionistic redoing",
+          "description": "Repeating or refusing to complete tasks until they meet an internal standard that may be unreachable.",
+          "severity_class": "maintaining_behavior",
+          "tracking_supported": true
+        }
+      ]
+    }
+  }
+}

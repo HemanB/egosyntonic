@@ -1,0 +1,138 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://egosyntonic.app/schemas/extraction.schema.json",
+  "title": "ExtractionResult",
+  "description": "Output of the write-time feature extraction LLM call. Runs over each incoming user utterance and produces structured metadata stored alongside the embedding. See idea.md §4.1, §4.2.",
+  "type": "object",
+  "required": [
+    "schema_version",
+    "utterance_id",
+    "extracted_at",
+    "affective_valence",
+    "behaviors_referenced",
+    "cognitive_content",
+    "network_nodes_activated",
+    "implicated_need_states",
+    "contextual_markers"
+  ],
+  "properties": {
+    "schema_version": { "type": "string", "const": "1.0.0" },
+    "utterance_id": { "type": "string" },
+    "extracted_at": { "type": "string", "format": "date-time" },
+    "model_id": { "type": "string", "description": "e.g. 'gemini-2.5-flash'." },
+    "prompt_template_version": { "type": "string", "description": "Hash or semver of the Jinja2 template used." },
+
+    "affective_valence": {
+      "type": "object",
+      "description": "Dimensional affect — not categorical emotion labels.",
+      "required": ["valence", "arousal"],
+      "properties": {
+        "valence": { "type": "number", "minimum": -1, "maximum": 1, "description": "-1 maximally unpleasant, +1 maximally pleasant." },
+        "arousal": { "type": "number", "minimum": -1, "maximum": 1, "description": "-1 deactivated/calm, +1 highly activated." },
+        "dominance": { "type": ["number", "null"], "minimum": -1, "maximum": 1, "description": "Optional; PAD model dominance axis." },
+        "confidence": { "type": "number", "minimum": 0, "maximum": 1 }
+      }
+    },
+
+    "behaviors_referenced": {
+      "type": "array",
+      "description": "Controlled vocabulary from shared/vocabularies/behaviors.json. Empty array if no behaviors referenced.",
+      "items": {
+        "type": "object",
+        "required": ["behavior_id", "stance"],
+        "properties": {
+          "behavior_id": { "type": "string" },
+          "stance": {
+            "type": "string",
+            "enum": ["engaged_in", "considered", "resisted", "described_as_past", "described_in_others", "ambiguous"],
+            "description": "How the user related to the behavior in the utterance. Critical for not confusing 'I thought about restricting' with 'I restricted'."
+          },
+          "temporal_marker": {
+            "type": ["string", "null"],
+            "description": "Free-text excerpt anchoring when ('this morning', 'yesterday', 'last week'). Null if unclear."
+          }
+        }
+      }
+    },
+
+    "cognitive_content": {
+      "type": "object",
+      "properties": {
+        "distortions": {
+          "type": "array",
+          "description": "CBT-E / CBT cognitive distortion categories present. Open vocabulary; common values: all_or_nothing, catastrophizing, mind_reading, fortune_telling, should_statements, overgeneralization, personalization, emotional_reasoning, magnification_minimization, labeling.",
+          "items": { "type": "string" }
+        },
+        "themes": {
+          "type": "array",
+          "description": "Free-text thematic tags — what the user is talking ABOUT (work, family, body, etc.).",
+          "items": { "type": "string", "maxLength": 60 }
+        },
+        "key_phrases": {
+          "type": "array",
+          "description": "Verbatim user phrases worth preserving for later 'echo' insights (idea.md §5.4). Up to 5.",
+          "maxItems": 5,
+          "items": { "type": "string", "maxLength": 200 }
+        }
+      }
+    },
+
+    "network_nodes_activated": {
+      "type": "array",
+      "description": "Controlled vocabulary keys from shared/vocabularies/network_nodes.json. The nodes whose activation the utterance evidences.",
+      "items": {
+        "type": "object",
+        "required": ["node_id", "evidence_strength"],
+        "properties": {
+          "node_id": { "type": "string" },
+          "evidence_strength": { "type": "number", "minimum": 0, "maximum": 1 }
+        }
+      }
+    },
+
+    "implicated_need_states": {
+      "type": "array",
+      "description": "SDT need-states the utterance implicates, with life-domain context.",
+      "items": {
+        "type": "object",
+        "required": ["need", "domain", "polarity"],
+        "properties": {
+          "need": { "type": "string", "enum": ["autonomy", "competence", "relatedness"] },
+          "domain": { "type": "string", "description": "Life domain: work, relationships, family, self_direction, body, social, other." },
+          "polarity": { "type": "string", "enum": ["satisfied", "thwarted", "ambiguous"] },
+          "confidence": { "type": "number", "minimum": 0, "maximum": 1 }
+        }
+      }
+    },
+
+    "contextual_markers": {
+      "type": "object",
+      "description": "Context the user mentioned or that can be inferred from session metadata.",
+      "properties": {
+        "time_of_day": { "type": ["string", "null"], "enum": ["morning", "midday", "afternoon", "evening", "late_night", null] },
+        "day_of_week": { "type": ["string", "null"] },
+        "social_context": { "type": ["string", "null"], "description": "alone, with_partner, with_family, with_friends, at_work, public, other." },
+        "location_type": { "type": ["string", "null"], "description": "home, work, transit, restaurant, public, other." },
+        "after_meal_context": { "type": ["boolean", "null"], "description": "Whether utterance occurs around a mealtime — flagged because ED-pack reasoning is meal-context-sensitive." }
+      }
+    },
+
+    "safety_signals": {
+      "type": "object",
+      "description": "Pre-pipeline safety scan results. Any 'true' here short-circuits to the safety template (idea.md §9).",
+      "properties": {
+        "active_si": { "type": "boolean", "default": false },
+        "self_harm_intent": { "type": "boolean", "default": false },
+        "medical_acute": { "type": "boolean", "default": false, "description": "Refeeding signs, severe restriction, syncope, vomiting blood." },
+        "asking_for_methods": { "type": "boolean", "default": false, "description": "User asks about methods or means. Always refused per idea.md §9.2." },
+        "asking_for_numbers": { "type": "boolean", "default": false, "description": "User asks for calorie/weight/duration numbers. Always refused per idea.md §9.3." }
+      }
+    },
+
+    "low_information": {
+      "type": "boolean",
+      "default": false,
+      "description": "Greeting, scheduling, very short. Stored but down-weighted for retrieval (idea.md §4.4)."
+    }
+  }
+}

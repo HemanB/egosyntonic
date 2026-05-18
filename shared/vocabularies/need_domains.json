@@ -1,0 +1,49 @@
+{
+  "schema_version": "1.0.0",
+  "description": "SDT-grounded need-domain vocabulary for the SDT head (idea.md §2 'functional substrates', §3.2 SDT head). Condition-agnostic — same vocabulary applies regardless of condition pack.",
+  "needs": [
+    {
+      "id": "autonomy",
+      "label": "Autonomy",
+      "description": "Experience of acting from genuine self-direction. Thwarted when externally controlled, pressured, or unable to act on one's own values."
+    },
+    {
+      "id": "competence",
+      "label": "Competence",
+      "description": "Experience of effectance and mastery. Thwarted when consistently failing, evaluated harshly, or kept from challenges one can grow into."
+    },
+    {
+      "id": "relatedness",
+      "label": "Relatedness",
+      "description": "Experience of meaningful connection. Thwarted when belonging is precarious, conditional, or absent."
+    }
+  ],
+  "domains": [
+    { "id": "work", "label": "Work or studies", "description": "Paid or unpaid productive activity, schooling, career trajectory." },
+    { "id": "relationships", "label": "Romantic or close partner relationship" },
+    { "id": "family", "label": "Family of origin or chosen family" },
+    { "id": "friendships", "label": "Friendships" },
+    { "id": "self_direction", "label": "Self-direction", "description": "The user's relationship with their own goals, values, and life trajectory." },
+    { "id": "body", "label": "Relationship to one's own body" },
+    { "id": "social", "label": "Broader social context", "description": "Communities, groups, public-facing roles." },
+    { "id": "other", "label": "Other", "description": "Catch-all when domain doesn't fit the above. Free-text qualifier expected." }
+  ],
+  "framing_language_hints": {
+    "description": "Approximate framings the generation prompt can use when SDT head identifies a thwarted need. NOT user-facing copy verbatim — hints for register. Lean toward the user's own language whenever possible; these are fallbacks.",
+    "autonomy": [
+      "feeling like things are happening to you rather than with you",
+      "wanting to choose, not be chosen for",
+      "needing some say in this"
+    ],
+    "competence": [
+      "wanting to feel capable",
+      "needing something to feel like it lands when you do it",
+      "looking for somewhere you can be good at something"
+    ],
+    "relatedness": [
+      "needing someone to actually see this",
+      "wanting to belong without having to perform",
+      "looking for closeness that doesn't cost so much"
+    ]
+  }
+}

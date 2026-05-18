@@ -1,0 +1,95 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://egosyntonic.app/schemas/insight.schema.json",
+  "title": "Insight",
+  "description": "A pattern surfaced to the user. Observational, not interpretive (idea.md §5.1). Insights surface in language drawn from the user's own utterances with retrievable evidence.",
+  "type": "object",
+  "required": [
+    "schema_version",
+    "insight_id",
+    "user_id",
+    "type",
+    "rendered_text",
+    "evidence",
+    "confidence",
+    "min_intensity",
+    "data_density_check",
+    "created_at"
+  ],
+  "properties": {
+    "schema_version": { "type": "string", "const": "1.0.0" },
+    "insight_id": { "type": "string", "description": "Stable ID. Used to dedupe and to track user response over time." },
+    "user_id": { "type": "string" },
+
+    "type": {
+      "type": "string",
+      "enum": ["pattern", "echo", "shift", "context"],
+      "description": "idea.md §5.4. Pattern: X after Y, N times in M days. Echo: surfaced past utterance. Shift: talking about X differently. Context: feelings around time/place/situation. Each has its own rendering template."
+    },
+
+    "rendered_text": {
+      "type": "string",
+      "maxLength": 600,
+      "description": "Final user-facing copy. Generated to mirror the user's register. No clinical jargon. No interpretation — just observation."
+    },
+
+    "evidence": {
+      "type": "array",
+      "description": "Backs the 'tap to see what this is based on' affordance (idea.md §5.1). Every insight MUST cite verifiable evidence from the user's data.",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "required": ["ref_type", "ref_id"],
+        "properties": {
+          "ref_type": { "type": "string", "enum": ["utterance", "behavior_log", "summary"] },
+          "ref_id": { "type": "string" },
+          "excerpt": { "type": "string", "maxLength": 400, "description": "Verbatim or near-verbatim excerpt. For echoes, this IS the surfaced text." },
+          "occurred_at": { "type": "string", "format": "date-time" }
+        }
+      }
+    },
+
+    "confidence": {
+      "type": "number",
+      "minimum": 0,
+      "maximum": 1,
+      "description": "Confidence in the pattern. Surfacing thresholds vary by insight type and user's intensity setting."
+    },
+
+    "min_intensity": {
+      "type": "string",
+      "enum": ["quiet", "moderate", "active"],
+      "description": "Lowest user intensity setting at which this insight is eligible to surface. Quiet-tier users see this only on explicit ask."
+    },
+
+    "data_density_check": {
+      "type": "object",
+      "description": "Verifies the data-density gate (idea.md §5.2). v1: 3+ co-occurrences AND 2+ weeks of use for graduated insights.",
+      "required": ["co_occurrences", "user_weeks_of_use", "gate_passed"],
+      "properties": {
+        "co_occurrences": { "type": "integer", "minimum": 0 },
+        "user_weeks_of_use": { "type": "number", "minimum": 0 },
+        "gate_passed": { "type": "boolean" },
+        "gate_rationale": { "type": "string", "maxLength": 200 }
+      }
+    },
+
+    "cc_anchored": {
+      "type": "boolean",
+      "description": "True if this insight is grounded in the user's stated chief complaint (idea.md §5.2). Initial weeks: only cc-anchored insights surface.",
+      "default": true
+    },
+
+    "created_at": { "type": "string", "format": "date-time" },
+    "surfaced_at": { "type": ["string", "null"], "format": "date-time" },
+    "user_response": {
+      "type": "string",
+      "enum": ["pending", "tap", "dismiss", "correct", "ignore"],
+      "default": "pending"
+    },
+    "correction_note": {
+      "type": ["string", "null"],
+      "description": "User-provided 'this isn't right' feedback. Feeds back into the state document."
+    }
+  }
+}
