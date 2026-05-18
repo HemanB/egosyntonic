@@ -1,3 +1,6 @@
+# --- Tooling state (e.g. agent worktrees, local conversation state) ---
+.claude/
+
 # --- macOS ---
 .DS_Store
 .AppleDouble
