@@ -1,0 +1,99 @@
+# --- macOS ---
+.DS_Store
+.AppleDouble
+.LSOverride
+Icon?
+
+# --- Editors / IDEs ---
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+.cursor/
+
+# --- Python (backend/) ---
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+.venv/
+venv/
+env/
+ENV/
+.pytest_cache/
+.ruff_cache/
+.pyright/
+.mypy_cache/
+.coverage
+htmlcov/
+.tox/
+.nox/
+
+# --- uv ---
+.uv-cache/
+
+# --- Node / iOS tooling (Phase 2) ---
+node_modules/
+.expo/
+DerivedData/
+*.xcodeproj/xcuserdata/
+*.xcworkspace/xcuserdata/
+Pods/
+.swiftpm/
+
+# --- Terraform (infra/) ---
+.terraform/
+*.tfstate
+*.tfstate.*
+*.tfplan
+*.tfvars
+!*.tfvars.example
+.terraformrc
+terraform.rc
+crash.log
+crash.*.log
+override.tf
+override.tf.json
+*_override.tf
+*_override.tf.json
+
+# --- Secrets / credentials ---
+*.pem
+*.key
+*.crt
+.env
+.env.*
+!.env.example
+*serviceaccount*.json
+*service-account*.json
+gha-creds-*.json
+credentials.json
+
+# --- Build artifacts ---
+*.log
+*.pid
+*.seed
+*.pid.lock
+coverage/
+.nyc_output/
+
+# --- Generated code (regenerate from shared/schemas/) ---
+backend/reasoning/generated/
+app/Sources/Generated/
