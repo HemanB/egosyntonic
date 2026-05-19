@@ -48,11 +48,13 @@ from ..safety import (
 
 log = get_logger(__name__)
 
-# backend/reasoning/eval/run_golden.py → parents[3] = backend/
-_BACKEND = Path(__file__).resolve().parents[3]
+# backend/reasoning/eval/run_golden.py → parents[2] = backend/
+_BACKEND = Path(__file__).resolve().parents[2]
 _FIXTURES_DIR = _BACKEND / "eval" / "golden"
 _REPORTS_DIR = _BACKEND / "eval" / "reports"
 _RUNS_DIR = _BACKEND / "eval" / "runs"
+_REPORTS_DIR.mkdir(parents=True, exist_ok=True)
+_RUNS_DIR.mkdir(parents=True, exist_ok=True)
 
 
 # --- Fixture model ---
@@ -156,6 +158,7 @@ async def _run_fixture(
             network=NetworkHead(active_nodes=[], rationale="bypassed"),
             sdt=SDTHead(thwarted_in=[], rationale="bypassed"),
             orchestration=Orchestration(
+                rationale="Safety classifier short-circuit; reasoning bypassed.",
                 intervention_intensity="none",
                 safety_flags=[flag] if flag else [],
             ),
@@ -164,7 +167,7 @@ async def _run_fixture(
             response_text=template.body if template else "",
             surfaced_memory_ref_ids=[],
         )
-        verdict = await critic.audit(turn, plan, gen, settings)
+        verdict = await critic.audit(turn, plan, gen, settings, used_safety_template=True)
         latency_ms = int((time.perf_counter() - started) * 1000)
         return (gen.response_text, plan, gen, verdict, {}, latency_ms, True)
 
@@ -212,7 +215,9 @@ async def _run_fixture(
         settings,
         safety_template=template_body,
     )
-    verdict = await critic.audit(turn, plan, gen, settings)
+    verdict = await critic.audit(
+        turn, plan, gen, settings, used_safety_template=template_body is not None
+    )
     latency_ms = int((time.perf_counter() - started) * 1000)
 
     extraction_summary = {
@@ -243,12 +248,19 @@ def _check_assertions(
     extraction_summary: dict[str, Any],
     used_safety_template: bool,
 ) -> list[tuple[str, bool, str]]:
-    """Returns list of (label, passed, detail)."""
+    """Returns list of (label, passed, detail).
+
+    When `used_safety_template=True`, extraction and most plan.* assertions
+    are skipped — those stages were bypassed by the safety classifier
+    short-circuit and any expectations on them are not meaningful. We still
+    check the safety-relevant fields (safety_flags, critic.passed,
+    generation forbidden phrases, used_safety_template itself).
+    """
     results: list[tuple[str, bool, str]] = []
     expected = fixture.get("expected", {})
 
-    # --- Extraction ---
-    ext_exp = expected.get("extraction", {})
+    # --- Extraction --- (skip entirely on safety short-circuit)
+    ext_exp = expected.get("extraction", {}) if not used_safety_template else {}
     must_contain = ext_exp.get("must_contain", {})
     if "behaviors_referenced" in must_contain:
         expected_behaviors = must_contain["behaviors_referenced"]
@@ -270,9 +282,13 @@ def _check_assertions(
         ))
 
     # --- Plan ---
+    # On safety short-circuit, the reasoning heads were bypassed; only
+    # `plan.orchestration.safety_flags_*` assertions remain meaningful.
     plan_exp = expected.get("plan", {})
+    rcp_exp = plan_exp.get("receptivity", {}) if not used_safety_template else {}
+    net_exp = plan_exp.get("network", {}) if not used_safety_template else {}
+    orc_exp = plan_exp.get("orchestration", {})
     # receptivity score bounds
-    rcp_exp = plan_exp.get("receptivity", {})
     if "score_max" in rcp_exp:
         ok = plan.receptivity.score <= rcp_exp["score_max"]
         results.append((
@@ -295,7 +311,6 @@ def _check_assertions(
             f"got {plan.receptivity.categorical_state}, allowed {rcp_exp['categorical_state_in']}",
         ))
     # network upstream target
-    net_exp = plan_exp.get("network", {})
     if "upstream_target_node_id_in" in net_exp:
         got = plan.network.upstream_target_node_id
         allowed = net_exp["upstream_target_node_id_in"]
@@ -306,7 +321,6 @@ def _check_assertions(
             f"got {got!r}, allowed {allowed}",
         ))
     # orchestration intensity
-    orc_exp = plan_exp.get("orchestration", {})
     if "intervention_intensity_in" in orc_exp:
         ok = plan.orchestration.intervention_intensity in orc_exp["intervention_intensity_in"]
         results.append((

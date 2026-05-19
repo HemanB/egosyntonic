@@ -159,7 +159,7 @@ async def _run_safety_short_circuit(
         response_text=template.body,
         surfaced_memory_ref_ids=[],
     )
-    verdict = await critic.audit(turn, plan, generated, settings)
+    verdict = await critic.audit(turn, plan, generated, settings, used_safety_template=True)
 
     latency_ms = int((time.perf_counter() - started) * 1000)
     asyncio.create_task(_post_turn_state_update(turn, plan, generated, verdict, settings))
@@ -229,7 +229,7 @@ async def _run_post_reasoning_safety_short_circuit(
         )
 
     generated = GenerationOutput(response_text=template.body, surfaced_memory_ref_ids=[])
-    verdict = await critic.audit(turn, plan, generated, settings)
+    verdict = await critic.audit(turn, plan, generated, settings, used_safety_template=True)
     latency_ms = int((time.perf_counter() - started) * 1000)
     asyncio.create_task(_post_turn_state_update(turn, plan, generated, verdict, settings))
     return TurnResult(
@@ -273,6 +273,7 @@ def _safety_synthetic_plan(
         network=NetworkHead(active_nodes=[], rationale="bypassed"),
         sdt=SDTHead(thwarted_in=[], rationale="bypassed"),
         orchestration=Orchestration(
+            rationale=f"Pre-pipeline safety classifier short-circuit: {safety.primary.value}",
             intervention_intensity="none",
             safety_flags=safety_flags,
         ),
@@ -294,7 +295,7 @@ def _crash_safe_response(turn: TurnInput, started: float) -> TurnResult:
         dynamical_state=DynamicalHead(current_loop_id=None, stability=0.0, posture="support", rationale="fallback"),
         network=NetworkHead(active_nodes=[], rationale="fallback"),
         sdt=SDTHead(thwarted_in=[], rationale="fallback"),
-        orchestration=Orchestration(intervention_intensity="presence", safety_flags=[]),
+        orchestration=Orchestration(rationale="crash-safe fallback", intervention_intensity="presence", safety_flags=[]),
     )
     _ = turn
     return TurnResult(

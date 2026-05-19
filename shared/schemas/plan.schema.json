@@ -2,7 +2,7 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://egosyntonic.app/schemas/plan.schema.json",
   "title": "ReasoningPlan",
-  "description": "Structured output of the reasoning LLM call. Four head outputs plus an integrated orchestration section. Acts as conditioning scaffold for generation. See idea.md §3.2, §3.3.",
+  "description": "Structured output of the reasoning LLM call. Four head outputs plus an integrated orchestration section. Acts as conditioning scaffold for generation. See idea.md §3.2, §3.3. Field order in each head is rationale-first: the model must emit its chain of thought BEFORE committing to the structured values it justifies. This forces CoT to drive the answer rather than be post-hoc justification.",
   "type": "object",
   "required": [
     "schema_version",
@@ -25,10 +25,15 @@
 
     "receptivity": {
       "type": "object",
-      "description": "idea.md §3.2 receptivity head.",
-      "required": ["score", "categorical_state", "actionability", "rationale"],
+      "description": "idea.md §3.2 receptivity head. rationale-first: write CoT before committing to score/state.",
+      "required": ["rationale", "score", "categorical_state", "actionability"],
       "properties": {
-        "score": { "type": "number", "minimum": 0, "maximum": 1, "description": "Intervention-receptiveness 0–1. Low = shift toward presence/validation, not insight." },
+        "rationale": {
+          "type": "string",
+          "maxLength": 1000,
+          "description": "CoT generated BEFORE the structured fields. Cite specific utterance text, behavior cues, or state evidence. Never user-facing."
+        },
+        "score": { "type": "number", "minimum": 0, "maximum": 1, "description": "Intervention-receptiveness 0–1." },
         "categorical_state": {
           "type": "string",
           "enum": ["open_to_reflection", "active_distress", "crisis", "dissociated_or_disengaged", "seeking_practical_support"]
@@ -36,20 +41,16 @@
         "actionability": {
           "type": "boolean",
           "description": "Can the user act on an intervention right now given their context?"
-        },
-        "rationale": {
-          "type": "string",
-          "maxLength": 1000,
-          "description": "Chain-of-thought explanation. Internal — never user-facing."
         }
       }
     },
 
     "dynamical_state": {
       "type": "object",
-      "description": "idea.md §3.2 dynamical state head.",
-      "required": ["current_loop_id", "stability", "posture", "rationale"],
+      "description": "idea.md §3.2 dynamical state head. rationale-first.",
+      "required": ["rationale", "current_loop_id", "stability", "posture"],
       "properties": {
+        "rationale": { "type": "string", "maxLength": 1000 },
         "current_loop_id": {
           "type": ["string", "null"],
           "description": "Loop ID from state document's active_loops, or a clinical-archetype ID for new users. Null if no loop is currently active."
@@ -64,16 +65,16 @@
           "type": "string",
           "enum": ["interrupt", "support", "consolidate", "none"],
           "description": "Interrupt active loop, support stable-but-vulnerable, consolidate moment of insight, or no intervention."
-        },
-        "rationale": { "type": "string", "maxLength": 1000 }
+        }
       }
     },
 
     "network": {
       "type": "object",
-      "description": "idea.md §3.2 network head.",
-      "required": ["active_nodes", "rationale"],
+      "description": "idea.md §3.2 network head. rationale-first. MUST flag egosyntonic_collusion_risk in orchestration.safety_flags when a maintaining behavior is framed positively.",
+      "required": ["rationale", "active_nodes"],
       "properties": {
+        "rationale": { "type": "string", "maxLength": 1000 },
         "active_nodes": {
           "type": "array",
           "items": {
@@ -99,17 +100,17 @@
         },
         "upstream_target_node_id": {
           "type": ["string", "null"],
-          "description": "Most causally upstream active node. Recommended intervention target."
+          "description": "Most causally upstream active node. Recommended intervention target. For ED-pack users, rarely the behavior itself; usually an upstream affective or cognitive node."
         },
         "candidate_patterns": {
           "type": "array",
-          "description": "Patterns worth surfacing if receptivity supports it.",
+          "description": "Patterns worth surfacing if receptivity supports it. Data-density gated.",
           "items": {
             "type": "object",
             "required": ["pattern_type", "summary"],
             "properties": {
               "pattern_type": { "type": "string", "enum": ["pattern", "echo", "shift", "context"] },
-              "summary": { "type": "string", "maxLength": 400, "description": "One-sentence summary — generation may use as scaffold." },
+              "summary": { "type": "string", "maxLength": 400 },
               "evidence_utterance_ids": {
                 "type": "array",
                 "items": { "type": "string" }
@@ -117,16 +118,16 @@
               "confidence": { "type": "number", "minimum": 0, "maximum": 1 }
             }
           }
-        },
-        "rationale": { "type": "string", "maxLength": 1000 }
+        }
       }
     },
 
     "sdt": {
       "type": "object",
-      "description": "idea.md §3.2 SDT head. Updates slowly; primarily affects framing language.",
-      "required": ["thwarted_in", "rationale"],
+      "description": "idea.md §3.2 SDT head. Updates slowly. rationale-first.",
+      "required": ["rationale", "thwarted_in"],
       "properties": {
+        "rationale": { "type": "string", "maxLength": 1000 },
         "thwarted_in": {
           "type": "array",
           "items": {
@@ -153,61 +154,31 @@
           }
         },
         "framing_language_hint": {
-          "type": "string",
+          "type": ["string", "null"],
           "maxLength": 400,
-          "description": "Which need-language to use in generation. Not user-facing copy; a hint for the generation prompt."
-        },
-        "rationale": { "type": "string", "maxLength": 1000 }
+          "description": "Which need-language to use in generation. Internal scaffolding."
+        }
       }
     },
 
     "orchestration": {
       "type": "object",
-      "description": "idea.md §3.3 — integrated plan.",
-      "required": [
-        "intervention_intensity",
-        "safety_flags"
-      ],
+      "description": "idea.md §3.3 — integrated plan. rationale-first.",
+      "required": ["rationale", "intervention_intensity", "safety_flags"],
       "properties": {
+        "rationale": {
+          "type": "string",
+          "maxLength": 1000,
+          "description": "Brief justification of intensity + safety_flags choices. CoT generated BEFORE the structured fields."
+        },
         "intervention_intensity": {
           "type": "string",
           "enum": ["none", "presence", "light_reflection", "pattern_surfacing", "direct_invitation"],
-          "description": "Gated by receptivity. Low receptivity caps at 'presence'."
-        },
-        "content_focus": {
-          "type": ["object", "null"],
-          "description": "Which network node or pattern to address. Null when intensity is none/presence.",
-          "properties": {
-            "node_id": { "type": ["string", "null"] },
-            "pattern_index": { "type": ["integer", "null"], "description": "Index into network.candidate_patterns." }
-          }
-        },
-        "framing_language": {
-          "type": "object",
-          "properties": {
-            "sdt_need_language": { "type": ["string", "null"] },
-            "user_register_excerpts": {
-              "type": "array",
-              "description": "Verbatim phrases from the user's history that generation should mirror to write in their register.",
-              "items": { "type": "string", "maxLength": 200 }
-            }
-          }
-        },
-        "memory_references": {
-          "type": "array",
-          "description": "Specific past utterance IDs or behavior log IDs the response should reference. Used for 'echo' and 'pattern' insights.",
-          "items": {
-            "type": "object",
-            "required": ["ref_type", "ref_id"],
-            "properties": {
-              "ref_type": { "type": "string", "enum": ["utterance", "behavior_log", "summary"] },
-              "ref_id": { "type": "string" }
-            }
-          }
+          "description": "Gated by receptivity."
         },
         "safety_flags": {
           "type": "array",
-          "description": "Any safety signals requiring crisis-handling, medical-stability response, or supervision override. If non-empty, generation MUST use the corresponding fixed template (idea.md §9.1).",
+          "description": "Any safety signals requiring crisis-handling, medical-stability, methods refusal, numerical refusal, egosyntonic-collusion-risk, or limitations disclosure. If a crisis/methods/numerical/medical flag is set, generation will use a fixed template.",
           "items": {
             "type": "string",
             "enum": [
@@ -219,6 +190,35 @@
               "egosyntonic_collusion_risk",
               "boundary_disclosure_needed"
             ]
+          }
+        },
+        "content_focus": {
+          "type": ["object", "null"],
+          "description": "Which network node or candidate_pattern index the response should address.",
+          "properties": {
+            "node_id": { "type": ["string", "null"] },
+            "pattern_index": { "type": ["integer", "null"] }
+          }
+        },
+        "framing_language": {
+          "type": "object",
+          "properties": {
+            "sdt_need_language": { "type": ["string", "null"] },
+            "user_register_excerpts": {
+              "type": "array",
+              "items": { "type": "string", "maxLength": 200 }
+            }
+          }
+        },
+        "memory_references": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": ["ref_type", "ref_id"],
+            "properties": {
+              "ref_type": { "type": "string", "enum": ["utterance", "behavior_log", "summary"] },
+              "ref_id": { "type": "string" }
+            }
           }
         }
       }

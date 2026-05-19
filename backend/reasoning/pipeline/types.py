@@ -121,7 +121,16 @@ class RetrievalBundle(BaseModel):
 # --- Plan (mirrors plan.schema.json) ---
 
 
+# Rationale-first ordering across all heads: Pydantic Field declaration
+# order drives the JSON Schema property order, which Gemini's structured
+# output respects. Forcing rationale FIRST means the model emits its chain
+# of thought BEFORE committing to the structured values that the rationale
+# justifies. Without this, rationale becomes post-hoc justification and the
+# structured fields default to safe-looking constants.
+
+
 class ReceptivityHead(BaseModel):
+    rationale: str
     score: float = Field(ge=0, le=1)
     categorical_state: Literal[
         "open_to_reflection",
@@ -131,16 +140,15 @@ class ReceptivityHead(BaseModel):
         "seeking_practical_support",
     ]
     actionability: bool
-    rationale: str
 
 
 class DynamicalHead(BaseModel):
+    rationale: str
     current_loop_id: str | None
     current_loop_label: str | None = None
     stability: float = Field(ge=0, le=1)
     transition_signals: list[str] = Field(default_factory=list)
     posture: Literal["interrupt", "support", "consolidate", "none"]
-    rationale: str
 
 
 class CandidatePattern(BaseModel):
@@ -151,10 +159,10 @@ class CandidatePattern(BaseModel):
 
 
 class NetworkHead(BaseModel):
+    rationale: str
     active_nodes: list[NetworkNodeActivation] = Field(default_factory=list)
     upstream_target_node_id: str | None = None
     candidate_patterns: list[CandidatePattern] = Field(default_factory=list)
-    rationale: str
 
 
 class ThwartedNeed(BaseModel):
@@ -164,9 +172,9 @@ class ThwartedNeed(BaseModel):
 
 
 class SDTHead(BaseModel):
+    rationale: str
     thwarted_in: list[ThwartedNeed] = Field(default_factory=list)
     framing_language_hint: str | None = None
-    rationale: str
 
 
 SafetyFlag = Literal[
@@ -181,15 +189,16 @@ SafetyFlag = Literal[
 
 
 class Orchestration(BaseModel):
+    rationale: str
     intervention_intensity: Literal[
         "none", "presence", "light_reflection", "pattern_surfacing", "direct_invitation"
     ]
+    safety_flags: list[SafetyFlag] = Field(default_factory=list)
     content_focus_node_id: str | None = None
     content_focus_pattern_index: int | None = None
     framing_sdt_language: str | None = None
     user_register_excerpts: list[str] = Field(default_factory=list)
     memory_reference_ids: list[str] = Field(default_factory=list)
-    safety_flags: list[SafetyFlag] = Field(default_factory=list)
 
 
 class ReasoningPlan(BaseModel):

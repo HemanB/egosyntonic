@@ -14,7 +14,6 @@ from structlog.processors import (
     add_log_level,
     format_exc_info,
 )
-from structlog.stdlib import filter_by_level
 
 
 def configure_logging(level: str = "INFO") -> None:
@@ -25,9 +24,11 @@ def configure_logging(level: str = "INFO") -> None:
         level=log_level,
     )
 
+    # No stdlib `filter_by_level` here — it requires a stdlib logger (with a
+    # `.disabled` attribute) but we're using `PrintLoggerFactory`. Level
+    # filtering is done by `make_filtering_bound_logger(log_level)` below.
     structlog.configure(
         processors=[
-            filter_by_level,
             merge_contextvars,
             add_log_level,
             TimeStamper(fmt="iso", utc=True),

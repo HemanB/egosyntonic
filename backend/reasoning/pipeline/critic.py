@@ -25,6 +25,8 @@ async def audit(
     plan: ReasoningPlan,
     generation: GenerationOutput,
     settings: Settings,
+    *,
+    used_safety_template: bool = False,
 ) -> CriticVerdict:
     # Deterministic post-filter ALWAYS runs first — belt and suspenders per
     # idea.md §9 implementation note. If it fires, we fail without spending
@@ -36,6 +38,13 @@ async def audit(
             flags=["missed_safety_signal"],
             notes=post.notes,
         )
+
+    # Safety templates are fixed text, clinical-advisor reviewed (eventually).
+    # Running the critic LLM on them only invites false positives — the LLM
+    # might judge a template's tone or intensity by criteria that don't apply
+    # to a fixed response. The post-filter above is the only check needed.
+    if used_safety_template:
+        return CriticVerdict(passed=True, flags=[], notes="safety-template-bypass")
 
     if settings.is_fixture or not settings.llm_is_live:
         return CriticVerdict(passed=True, flags=[], notes="fixture-mode auto-pass")

@@ -20,11 +20,11 @@
   ],
   "domains": [
     { "id": "work", "label": "Work or studies", "description": "Paid or unpaid productive activity, schooling, career trajectory." },
-    { "id": "relationships", "label": "Romantic or close partner relationship" },
-    { "id": "family", "label": "Family of origin or chosen family" },
-    { "id": "friendships", "label": "Friendships" },
+    { "id": "relationships", "label": "Romantic or close partner relationship", "description": "Current or recent partner, dating, romantic intimacy." },
+    { "id": "family", "label": "Family of origin or chosen family", "description": "Parents, siblings, extended family, chosen-family relationships." },
+    { "id": "friendships", "label": "Friendships", "description": "Close friends and peer-group relationships outside family and romantic ties." },
     { "id": "self_direction", "label": "Self-direction", "description": "The user's relationship with their own goals, values, and life trajectory." },
-    { "id": "body", "label": "Relationship to one's own body" },
+    { "id": "body", "label": "Relationship to one's own body", "description": "Embodied experience: how the user inhabits, perceives, and relates to their body." },
     { "id": "social", "label": "Broader social context", "description": "Communities, groups, public-facing roles." },
     { "id": "other", "label": "Other", "description": "Catch-all when domain doesn't fit the above. Free-text qualifier expected." }
   ],

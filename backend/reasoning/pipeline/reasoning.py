@@ -168,6 +168,7 @@ def _fixture_plan(
             rationale="Fixture stub: no SDT inference.",
         ),
         orchestration=Orchestration(
+            rationale="Fixture stub orchestration.",
             intervention_intensity="presence",
             safety_flags=[],
         ),
