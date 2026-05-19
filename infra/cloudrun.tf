@@ -15,7 +15,8 @@ resource "google_cloud_run_v2_service" "reasoning" {
   name     = "${var.service_name}-${var.env}"
   labels   = local.labels
 
-  ingress  = "INGRESS_TRAFFIC_ALL"
+  ingress             = "INGRESS_TRAFFIC_ALL"
+  deletion_protection = var.env == "prod"
 
   template {
     service_account = google_service_account.reasoning_runtime.email

@@ -21,14 +21,25 @@ resource "google_logging_metric" "turn_cost" {
   name    = "egosyntonic/turn_cost_microcents"
   filter  = "jsonPayload.event=\"turn_completed\" AND jsonPayload.cost_microcents>0"
 
+  # DISTRIBUTION required when a value_extractor is set (GCP constraint).
+  # Exponential buckets covering 1 microcent → ~10^9 microcents ($10K) handle
+  # everything from cheap Flash embedding calls to runaway-cost outliers.
   metric_descriptor {
-    metric_kind = "DELTA"
-    value_type  = "INT64"
-    unit        = "1"
+    metric_kind  = "DELTA"
+    value_type   = "DISTRIBUTION"
+    unit         = "1"
     display_name = "egosyntonic per-turn cost (microcents)"
   }
 
   value_extractor = "EXTRACT(jsonPayload.cost_microcents)"
+
+  bucket_options {
+    exponential_buckets {
+      num_finite_buckets = 32
+      growth_factor      = 2
+      scale              = 1
+    }
+  }
 
   depends_on = [google_project_service.required]
 }

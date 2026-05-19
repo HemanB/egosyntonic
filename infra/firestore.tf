@@ -34,6 +34,14 @@ resource "google_firestore_index" "utterances_vector" {
     order      = "ASCENDING"
   }
 
+  # Firestore inserts __name__ between filter fields and the vector field on
+  # composite vector indexes. Declaring it explicitly keeps Terraform's plan
+  # clean against the server-side index shape.
+  fields {
+    field_path = "__name__"
+    order      = "ASCENDING"
+  }
+
   fields {
     field_path = "embedding"
     vector_config {
