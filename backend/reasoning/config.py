@@ -46,6 +46,11 @@ class Settings(BaseSettings):
     dev_auth_bypass: bool = Field(default=False, alias="EGOSYN_DEV_AUTH_BYPASS")
     dev_bypass_user_id: str = Field(default="local-dev-user", alias="EGOSYN_DEV_BYPASS_USER_ID")
 
+    # Reddit — eval corpus only; never used in prod
+    reddit_client_id: str | None = Field(default=None, alias="REDDIT_CLIENT_ID")
+    reddit_client_secret: str | None = Field(default=None, alias="REDDIT_CLIENT_SECRET")
+    reddit_user_agent: str | None = Field(default=None, alias="REDDIT_USER_AGENT")
+
     @property
     def is_fixture(self) -> bool:
         return self.runtime_mode == RuntimeMode.fixture

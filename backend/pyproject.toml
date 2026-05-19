@@ -32,6 +32,8 @@ dependencies = [
     "opentelemetry-exporter-gcp-trace>=1.7.0",
     # JSON Schema validation
     "jsonschema>=4.23.0",
+    # Reddit API for the eval corpus pipeline
+    "asyncpraw>=7.7.1",
 ]
 
 [dependency-groups]

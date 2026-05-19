@@ -1,6 +1,14 @@
 # --- Tooling state (e.g. agent worktrees, local conversation state) ---
 .claude/
 
+# --- Eval corpus (sensitive: Reddit content, reformatted utterances,
+#     pipeline outputs). NEVER commit raw or reformatted user-generated
+#     content from third-party sources. Eval CODE commits; eval DATA does not.
+backend/eval/corpus/data/
+backend/eval/corpus/reformatted/
+backend/eval/reports/
+backend/eval/runs/
+
 # --- macOS ---
 .DS_Store
 .AppleDouble
