@@ -54,18 +54,6 @@ resource "google_cloud_run_v2_service" "reasoning" {
         value = local.effective_firebase_project_id
       }
       env {
-        name  = "VERTEX_REGION"
-        value = var.region
-      }
-      env {
-        name  = "VERTEX_VECTOR_INDEX_ENDPOINT"
-        value = google_vertex_ai_index_endpoint.utterances.id
-      }
-      env {
-        name  = "VERTEX_VECTOR_INDEX_ID"
-        value = google_vertex_ai_index.utterances.id
-      }
-      env {
         name  = "EGOSYN_OTEL_ENABLED"
         value = "true"
       }
@@ -123,7 +111,7 @@ resource "google_cloud_run_v2_service" "reasoning" {
 
   depends_on = [
     google_project_service.required,
-    google_vertex_ai_index_endpoint_deployed_index.utterances,
+    google_firestore_index.utterances_vector,
     google_secret_manager_secret_iam_member.runtime_gemini_access,
   ]
 }

@@ -51,7 +51,7 @@ Toggled by `EGOSYN_RUNTIME_MODE`:
 
 - **`fixture`** (default): no external calls, deterministic stubs. Tests + CI run here.
 - **`live_llm`**: real Gemini calls; retrieval + state stay in-memory. No GCP needed. **This is the mode for testing CoT quality before the GCP project lands.** Just put `GEMINI_API_KEY=...` and `EGOSYN_RUNTIME_MODE=live_llm` in `.env.local`.
-- **`live`**: full GCP — Gemini + Vertex Vector Search + Firestore. Requires `gcloud auth application-default login`, a project with billing, and a populated Secret Manager entry.
+- **`live`**: full GCP — Gemini + Firestore (state + vector retrieval via `FindNearest`; ADR-0001). Requires `gcloud auth application-default login`, a project with billing, and a populated Secret Manager entry.
 
 `.env.local` is loaded after `.env` with higher precedence — keep personal overrides (API keys, project IDs) there.
 

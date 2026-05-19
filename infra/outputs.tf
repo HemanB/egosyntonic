@@ -40,16 +40,9 @@ output "artifact_registry_repo" {
   value       = "${google_artifact_registry_repository.containers.location}-docker.pkg.dev/${var.project_id}/${google_artifact_registry_repository.containers.repository_id}"
 }
 
-output "vertex_index_endpoint_id" {
-  value = google_vertex_ai_index_endpoint.utterances.id
-}
-
-output "vertex_index_id" {
-  value = google_vertex_ai_index.utterances.id
-}
-
-output "vertex_deployed_index_id" {
-  value = google_vertex_ai_index_endpoint_deployed_index.utterances.deployed_index_id
+output "utterances_vector_index_name" {
+  description = "Firestore vector index name backing utterance retrieval."
+  value       = google_firestore_index.utterances_vector.name
 }
 
 output "gemini_secret_name" {

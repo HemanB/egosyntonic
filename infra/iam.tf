@@ -23,13 +23,6 @@ resource "google_project_iam_member" "runtime_firestore" {
   member  = "serviceAccount:${google_service_account.reasoning_runtime.email}"
 }
 
-# Vertex AI access — embeddings + Vector Search
-resource "google_project_iam_member" "runtime_aiplatform" {
-  project = var.project_id
-  role    = "roles/aiplatform.user"
-  member  = "serviceAccount:${google_service_account.reasoning_runtime.email}"
-}
-
 # Cloud Tasks — enqueue async state-update jobs
 resource "google_project_iam_member" "runtime_cloudtasks" {
   project = var.project_id

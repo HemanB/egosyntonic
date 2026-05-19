@@ -4,14 +4,13 @@ Terraform managing all GCP resources for egosyntonic.
 
 ## Resources provisioned
 
-- **Service enablement** (`services.tf`) — Cloud Run, Firestore, Vertex AI, Secret Manager, Artifact Registry, Cloud Tasks, Cloud Logging, Cloud Trace, Cloud Monitoring, IAM, WIF, Firebase, Firebase Auth.
+- **Service enablement** (`services.tf`) — Cloud Run, Firestore, Generative Language (Gemini API), Secret Manager, Artifact Registry, Cloud Tasks, Cloud Logging, Cloud Trace, Cloud Monitoring, IAM, WIF, Firebase, Firebase Auth.
 - **Cloud Run** (`cloudrun.tf`) — `egosyntonic-reasoning-<env>` service. Authenticated only; iOS client sends Firebase ID tokens. Min instances = 0 (scales to zero).
-- **Firestore** (`firestore.tf`) — Native mode, point-in-time recovery enabled, delete protection on prod.
-- **Vertex AI Vector Search** (`vertex.tf`) — `egosyntonic-utterances-<env>` index (768-dim, cosine distance, streaming updates) + index endpoint + deployed-index binding. **First creation takes ~30 min.**
+- **Firestore** (`firestore.tf`) — Native mode, point-in-time recovery enabled, delete protection on prod. Also hosts the `utterances` vector index (768-dim, cosine via `FindNearest`) replacing Vertex AI Vector Search — see `docs/decisions/0001-firestore-vector-store.md`.
 - **Secret Manager** (`secrets.tf`) — `gemini-api-key` secret, created empty. Values added out-of-band via `gcloud secrets versions add`.
 - **Artifact Registry** (`artifact_registry.tf`) — Docker repo for the reasoning service image.
 - **IAM** (`iam.tf`) — Two service accounts:
-  - `egosyn-reasoning-<env>`: Cloud Run runtime identity. Scoped to Firestore, Vertex AI, Cloud Tasks, Trace, Logging, and the specific Gemini secret.
+  - `egosyn-reasoning-<env>`: Cloud Run runtime identity. Scoped to Firestore, Cloud Tasks, Trace, Logging, and the specific Gemini secret. (Gemini API uses the secret-managed API key — no aiplatform IAM needed.)
   - `egosyn-gh-ci-<env>`: Used by GitHub Actions via Workload Identity Federation. Can deploy Cloud Run revisions and push container images. **No JSON keys exist anywhere.**
 - **Monitoring** (`monitoring.tf`) — `_Default` log bucket retention, log-based metric for per-turn cost, and a 5xx-rate alert policy (notification channel left as a placeholder).
 
@@ -51,7 +50,7 @@ printf "%s" "$NEW_KEY" | gcloud secrets versions add gemini-api-key \
 
 ## Two environments
 
-Separate GCP projects, separate state buckets, separate `tfvars`. No shared resources between `dev` and `prod` — including service accounts, secrets, and Vertex indices.
+Separate GCP projects, separate state buckets, separate `tfvars`. No shared resources between `dev` and `prod` — including service accounts, secrets, and Firestore databases.
 
 ## What this Terraform does NOT do
 

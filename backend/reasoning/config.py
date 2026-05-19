@@ -12,7 +12,7 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 class RuntimeMode(str, Enum):
     fixture = "fixture"            # everything deterministic, no external calls
     live_llm = "live_llm"          # real Gemini calls; retrieval + state stay in-memory
-    live = "live"                  # full GCP integration (Vertex Vector Search + Firestore)
+    live = "live"                  # full GCP integration (Firestore vector search + state)
 
 
 class Settings(BaseSettings):
@@ -36,9 +36,9 @@ class Settings(BaseSettings):
 
     google_cloud_project: str | None = Field(default=None, alias="GOOGLE_CLOUD_PROJECT")
     firebase_project_id: str | None = Field(default=None, alias="FIREBASE_PROJECT_ID")
-    vertex_vector_index_endpoint: str | None = Field(default=None, alias="VERTEX_VECTOR_INDEX_ENDPOINT")
-    vertex_vector_index_id: str | None = Field(default=None, alias="VERTEX_VECTOR_INDEX_ID")
-    vertex_region: str = Field(default="us-central1", alias="VERTEX_REGION")
+    # Firestore-backed retrieval (ADR-0001). Collection holding utterance docs
+    # with an `embedding` vector field; queried via FindNearest at runtime.
+    utterances_collection: str = Field(default="utterances", alias="EGOSYN_UTTERANCES_COLLECTION")
 
     log_level: str = Field(default="INFO", alias="LOG_LEVEL")
     otel_enabled: bool = Field(default=False, alias="EGOSYN_OTEL_ENABLED")
@@ -62,7 +62,7 @@ class Settings(BaseSettings):
 
     @property
     def storage_is_live(self) -> bool:
-        """True only for full live mode — Firestore + Vertex Vector Search."""
+        """True only for full live mode — Firestore (state + vector retrieval)."""
         return self.runtime_mode == RuntimeMode.live
 
 

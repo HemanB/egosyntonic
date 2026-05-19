@@ -27,7 +27,7 @@ You need a recent macOS machine. The build is not tested on Linux or Windows yet
 - **`gcloud` CLI.** `brew install --cask google-cloud-sdk`. Required for any work that touches GCP. After install:
   - `gcloud auth login` (browser-based, human-only step).
   - `gcloud auth application-default login` (so local Python clients can pick up credentials).
-- **`terraform`.** `brew install terraform`. Required for `infra/` work.
+- **`terraform`.** `brew tap hashicorp/tap && brew install hashicorp/tap/terraform`. (HashiCorp pulled Terraform from the default Homebrew formulas after the BSL relicense; the tap is now the canonical install path.) Required for `infra/` work.
 - **`gh`** (GitHub CLI). `brew install gh`. Used for PR workflow.
 
 ### 1.4 Editor and pre-commit
@@ -105,7 +105,7 @@ Local development reads from `backend/.env.local` (gitignored). The canonical li
 > - `FIREBASE_PROJECT_ID` — linked to the GCP project.
 > - `FIREBASE_AUTH_EMULATOR_HOST` — set when using the Firebase Auth emulator locally.
 > - `FIRESTORE_EMULATOR_HOST` — set when using the Firestore emulator locally.
-> - `VERTEX_VECTOR_INDEX_ENDPOINT` — when running against real Vertex; unset in fixture mode.
+> - `EGOSYN_UTTERANCES_COLLECTION` — Firestore collection backing vector retrieval (`utterances` by default; see ADR-0001).
 > - `PIPELINE_FIXTURE_MODE` — `true` to short-circuit Gemini calls with deterministic fixture outputs (see §3.4).
 > - `LOG_LEVEL` — `DEBUG` for local, `INFO` in deployed environments.
 
@@ -153,7 +153,7 @@ Set `FIRESTORE_EMULATOR_HOST=localhost:8081` and `FIREBASE_AUTH_EMULATOR_HOST=lo
 
 ### 3.6 What does not run locally
 
-- **Vertex AI Vector Search.** No local emulator. Local dev runs in fixture mode for retrieval, or against the real `egosyntonic-dev` index for end-to-end smoke tests. The first time the index is provisioned, it takes about 30 minutes to be queryable (see Troubleshooting).
+- **Firestore vector search.** The Firestore emulator does not yet implement `FindNearest`. Local dev runs in fixture mode for retrieval, or against the real `egosyntonic-dev` Firestore for end-to-end smoke tests. Vector indexes build in seconds, so there is no long initial-provisioning wait (unlike the prior Vertex-based design — see ADR-0001).
 - **Cloud Run.** Local dev runs the service directly via uvicorn. The Docker image is built and run only for deploy or local container smoke tests.
 - **Cloud Tasks.** Local dev runs state-update jobs synchronously in-process, not via Cloud Tasks. > TODO: confirm when Track B wires the async state-update path.
 
@@ -273,15 +273,15 @@ uv run pytest --ignore=eval
 
 > TODO: filled in when Track E lands the safety-filter handling code and the canonical thresholds.
 
-### 7.2 Vertex Vector Search index propagation lag
+### 7.2 Firestore vector index missing
 
-**Symptom:** newly-written embeddings are not returned by retrieval queries for up to ~30 minutes after writing.
+**Symptom:** `FindNearest` returns `FAILED_PRECONDITION` complaining about a missing index.
 
-**Why it happens:** Vertex AI Vector Search indexes are eventually consistent. Writes go to the underlying storage immediately; the served index gets updated on a schedule. First-time index creation can take ~30 minutes before any query returns anything.
+**Why it happens:** Firestore vector indexes are declared as composite indexes (a non-vector field followed by a `vector_config` field). Without the matching declaration in Terraform (`infra/firestore.tf`), the runtime query can't find a usable index.
 
 **What you do:**
-- For local dev against a real index, prefer fixture mode so retrieval returns deterministic results without round-tripping Vertex.
-- For end-to-end smoke tests, seed the index in advance and wait for the first refresh to complete before running.
+- Verify the `utterances_vector` `google_firestore_index` resource exists in `infra/firestore.tf` and was applied (`terraform apply` includes it).
+- Firestore vector indexes build in seconds-to-minutes — much faster than the prior Vertex AI Vector Search design (which took ~30 min). See ADR-0001 for the migration rationale.
 - For CI eval, use fixture mode for retrieval. The relevance of real retrieval is evaluated in nightly runs, not per-PR.
 
 ### 7.3 Firebase Auth token verification in dev

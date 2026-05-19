@@ -7,8 +7,8 @@
 locals {
   required_services = [
     "run.googleapis.com",                    # Cloud Run
-    "firestore.googleapis.com",              # Firestore
-    "aiplatform.googleapis.com",             # Vertex AI (incl. Vector Search)
+    "firestore.googleapis.com",              # Firestore (incl. vector search)
+    "generativelanguage.googleapis.com",     # Gemini API (chat + embeddings)
     "secretmanager.googleapis.com",          # Secret Manager
     "cloudbuild.googleapis.com",             # Cloud Build (for image builds)
     "artifactregistry.googleapis.com",       # Docker registry
