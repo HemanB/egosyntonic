@@ -72,6 +72,12 @@ class FixtureResult:
     intervention_intensity: str
     receptivity_score: float
     receptivity_state: str
+    receptivity_rationale: str
+    dynamical_rationale: str
+    network_rationale: str
+    sdt_rationale: str
+    orchestration_rationale: str
+    upstream_target_node_id: str | None
     critic_passed: bool
     critic_flags: list[str]
     response_text: str
@@ -451,6 +457,12 @@ async def _run_one(
             intervention_intensity="",
             receptivity_score=0.0,
             receptivity_state="",
+            receptivity_rationale="",
+            dynamical_rationale="",
+            network_rationale="",
+            sdt_rationale="",
+            orchestration_rationale="",
+            upstream_target_node_id=None,
             critic_passed=False,
             critic_flags=[],
             response_text="",
@@ -479,6 +491,12 @@ async def _run_one(
         intervention_intensity=plan.orchestration.intervention_intensity,
         receptivity_score=plan.receptivity.score,
         receptivity_state=plan.receptivity.categorical_state,
+        receptivity_rationale=plan.receptivity.rationale,
+        dynamical_rationale=plan.dynamical_state.rationale,
+        network_rationale=plan.network.rationale,
+        sdt_rationale=plan.sdt.rationale,
+        orchestration_rationale=plan.orchestration.rationale,
+        upstream_target_node_id=plan.network.upstream_target_node_id,
         critic_passed=verdict.passed,
         critic_flags=list(verdict.flags),
         response_text=response_text,
@@ -538,6 +556,12 @@ async def main(filter_substr: str | None = None) -> int:
                 "intervention_intensity": r.intervention_intensity,
                 "receptivity_score": r.receptivity_score,
                 "receptivity_state": r.receptivity_state,
+                "receptivity_rationale": r.receptivity_rationale,
+                "dynamical_rationale": r.dynamical_rationale,
+                "network_rationale": r.network_rationale,
+                "sdt_rationale": r.sdt_rationale,
+                "orchestration_rationale": r.orchestration_rationale,
+                "upstream_target_node_id": r.upstream_target_node_id,
                 "critic_passed": r.critic_passed,
                 "critic_flags": r.critic_flags,
                 "response_text": r.response_text,
@@ -600,6 +624,7 @@ def _write_report(path: Path, results: list[FixtureResult], elapsed_s: float) ->
             md.append("")
             continue
         md.append(f"- intensity: `{r.intervention_intensity}` | receptivity: {r.receptivity_score:.2f} ({r.receptivity_state})")
+        md.append(f"- upstream_target_node_id: `{r.upstream_target_node_id}`")
         md.append(f"- safety_template_fired: {r.used_safety_template} | safety_flags: {r.safety_flags}")
         md.append(f"- critic.passed: {r.critic_passed} | critic.flags: {r.critic_flags}")
         md.append(f"- latency: {r.turn_latency_ms}ms")
@@ -609,6 +634,20 @@ def _write_report(path: Path, results: list[FixtureResult], elapsed_s: float) ->
             mark = "OK  " if ok else "FAIL"
             md.append(f"- `{mark}` `{label}` — {detail}")
         md.append("")
+        # Rationale fields — what the reasoning LLM actually wrote.
+        # Critical diagnostic surface: if scores collapse to constants but
+        # the rationale text shows differentiated reasoning, the issue is
+        # structured-output collapse. If both are flat, the prompt isn't
+        # landing. If both are differentiated, we have other bugs.
+        if r.receptivity_rationale or r.network_rationale:
+            md.append("**Rationale (per head):**")
+            md.append("")
+            md.append(f"- *receptivity:* {r.receptivity_rationale}")
+            md.append(f"- *dynamical:* {r.dynamical_rationale}")
+            md.append(f"- *network:* {r.network_rationale}")
+            md.append(f"- *sdt:* {r.sdt_rationale}")
+            md.append(f"- *orchestration:* {r.orchestration_rationale}")
+            md.append("")
         md.append("**Response:**")
         md.append("```")
         md.append(r.response_text.strip())

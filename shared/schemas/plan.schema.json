@@ -79,10 +79,10 @@
           "type": "array",
           "items": {
             "type": "object",
-            "required": ["node_id", "activation"],
+            "required": ["node_id", "evidence_strength"],
             "properties": {
               "node_id": { "type": "string" },
-              "activation": { "type": "number", "minimum": 0, "maximum": 1 }
+              "evidence_strength": { "type": "number", "minimum": 0, "maximum": 1, "description": "Field name matches extraction.schema.json's NetworkNodeActivation. Models may emit `activation`; the parser normalizes." }
             }
           }
         },

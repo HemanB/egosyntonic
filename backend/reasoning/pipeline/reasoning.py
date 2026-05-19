@@ -64,16 +64,18 @@ async def reason(
         current_datetime_iso=datetime.now(UTC).isoformat(),
     )
 
-    try:
-        parsed, meta = await call_structured(
-            settings.model_reasoning,
-            prompt,
-            ReasoningPlan,
-            settings,
-        )
-    except Exception:
-        log.exception("reasoning_live_call_failed_falling_back_to_fixture")
-        return _fixture_plan(turn, extraction, retrieval, settings)
+    # Don't silently fall back to fixture stubs on failure — that's what
+    # produced ADR-0002's misleading "constant output" diagnosis. If the
+    # call fails, surface the error to the caller so the eval runner can
+    # report it. Only fixture mode and live-call exceptions on UNANSWERABLE
+    # turns (Gemini safety filter, etc.) get a graceful path elsewhere.
+    parsed, meta = await call_structured(
+        settings.model_reasoning,
+        prompt,
+        ReasoningPlan,
+        settings,
+        free_text_mode=True,
+    )
 
     parsed = parsed.model_copy(update={
         "turn_id": str(uuid.uuid4()),

@@ -57,7 +57,7 @@ class NeedStateImplication(BaseModel):
     need: Literal["autonomy", "competence", "relatedness"]
     domain: str
     polarity: Literal["satisfied", "thwarted", "ambiguous"]
-    confidence: float = Field(ge=0, le=1)
+    confidence: float = Field(default=0.5, ge=0, le=1)
 
 
 class SafetySignals(BaseModel):
@@ -155,7 +155,7 @@ class CandidatePattern(BaseModel):
     pattern_type: Literal["pattern", "echo", "shift", "context"]
     summary: str
     evidence_utterance_ids: list[str] = Field(default_factory=list)
-    confidence: float = Field(ge=0, le=1)
+    confidence: float = Field(default=0.5, ge=0, le=1)
 
 
 class NetworkHead(BaseModel):
@@ -168,7 +168,7 @@ class NetworkHead(BaseModel):
 class ThwartedNeed(BaseModel):
     need: Literal["autonomy", "competence", "relatedness"]
     domain: str
-    confidence: float = Field(ge=0, le=1)
+    confidence: float = Field(default=0.5, ge=0, le=1)
 
 
 class SDTHead(BaseModel):
