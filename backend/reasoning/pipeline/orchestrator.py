@@ -85,7 +85,14 @@ async def run_turn(turn: TurnInput, settings: Settings) -> TurnResult:
     )
     log.debug("extraction_complete", utterance_id=extracted.utterance_id)
 
-    retrieved = await retrieval.retrieve_for_all_heads(turn, extracted, settings)
+    # Embed once; pass to retrieval and to the async utterance write below.
+    # In fixture / live_llm modes this is a zero vector (and retrieval is mocked).
+    from .embeddings import embed_text  # noqa: PLC0415
+    utterance_embedding = await embed_text(turn.utterance_text, settings)
+
+    retrieved = await retrieval.retrieve_for_all_heads(
+        turn, extracted, settings, utterance_embedding=utterance_embedding,
+    )
     log.debug("retrieval_complete", retrieved_count=len(retrieved.all_items()))
 
     plan = await reasoning.reason(
@@ -116,8 +123,9 @@ async def run_turn(turn: TurnInput, settings: Settings) -> TurnResult:
 
     latency_ms = int((time.perf_counter() - started) * 1000)
 
-    # State update fires-and-forgets — does not block the response.
+    # State update + utterance write fire-and-forget — do not block the response.
     asyncio.create_task(_post_turn_state_update(turn, plan, generated, verdict, settings))
+    asyncio.create_task(_post_turn_utterance_write(turn, extracted, utterance_embedding, settings))
 
     log.info(
         "turn_completed",
@@ -350,3 +358,18 @@ async def _post_turn_state_update(
         )
     except Exception as exc:  # noqa: BLE001
         log.error("state_update_failed", user_id=turn.user_id, error=str(exc))
+
+
+async def _post_turn_utterance_write(
+    turn: TurnInput,
+    extracted: Any,
+    embedding: list[float],
+    settings: Settings,
+) -> None:
+    """Persist the utterance + embedding to Firestore (live mode only)."""
+    try:
+        from . import retrieval as _retrieval  # noqa: PLC0415
+
+        await _retrieval.write_utterance(turn.user_id, turn, extracted, embedding, settings)
+    except Exception as exc:  # noqa: BLE001
+        log.error("utterance_write_failed", user_id=turn.user_id, error=str(exc))
