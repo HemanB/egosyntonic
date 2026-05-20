@@ -1,0 +1,54 @@
+# Cloud Build configuration for the reasoning service.
+#
+# Builds backend/Dockerfile with repo-root context (the Dockerfile needs
+# both backend/ and shared/ to assemble the container).
+#
+# Submit with:
+#   gcloud builds submit --config=cloudbuild.yaml --project=egosyntonic-dev .
+#
+# The deploy step then points the existing Cloud Run service (provisioned
+# by Terraform) at the new image.
+
+substitutions:
+  _IMAGE_REPO: us-central1-docker.pkg.dev/egosyntonic-dev/egosyntonic-dev/reasoning
+  _SERVICE: egosyntonic-reasoning-dev
+  _REGION: us-central1
+
+steps:
+  - id: build
+    name: gcr.io/cloud-builders/docker
+    args:
+      - build
+      - -f
+      - backend/Dockerfile
+      - -t
+      - ${_IMAGE_REPO}:${BUILD_ID}
+      - -t
+      - ${_IMAGE_REPO}:latest
+      - .
+
+  - id: push
+    name: gcr.io/cloud-builders/docker
+    args:
+      - push
+      - --all-tags
+      - ${_IMAGE_REPO}
+
+  - id: deploy
+    name: gcr.io/google.com/cloudsdktool/cloud-sdk
+    entrypoint: gcloud
+    args:
+      - run
+      - deploy
+      - ${_SERVICE}
+      - --image=${_IMAGE_REPO}:${BUILD_ID}
+      - --region=${_REGION}
+      - --project=${PROJECT_ID}
+      - --quiet
+
+images:
+  - ${_IMAGE_REPO}:${BUILD_ID}
+  - ${_IMAGE_REPO}:latest
+
+options:
+  logging: CLOUD_LOGGING_ONLY
