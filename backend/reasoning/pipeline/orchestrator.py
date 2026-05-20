@@ -121,11 +121,16 @@ async def run_turn(turn: TurnInput, settings: Settings) -> TurnResult:
 
     generated, verdict, attempts = await _generate_with_critic_loop(turn, plan, settings)
 
-    latency_ms = int((time.perf_counter() - started) * 1000)
+    # State update + utterance write are on the critical path in v1.
+    # `asyncio.create_task` was unreliable: Cloud Run can cancel background
+    # tasks after response send, and CLI runs lose them at loop close.
+    # Awaiting adds ~200-400ms (Firestore writes are fast); negligible vs
+    # the ~30s LLM-driven turn. v2 should move these to Cloud Tasks for
+    # proper out-of-band processing.
+    await _post_turn_state_update(turn, plan, generated, verdict, settings)
+    await _post_turn_utterance_write(turn, extracted, utterance_embedding, settings)
 
-    # State update + utterance write fire-and-forget — do not block the response.
-    asyncio.create_task(_post_turn_state_update(turn, plan, generated, verdict, settings))
-    asyncio.create_task(_post_turn_utterance_write(turn, extracted, utterance_embedding, settings))
+    latency_ms = int((time.perf_counter() - started) * 1000)
 
     log.info(
         "turn_completed",
