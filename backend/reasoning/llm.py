@@ -256,57 +256,125 @@ _PLAN_HEAD_KEYS = {"receptivity", "dynamical_state", "network", "sdt", "orchestr
 def _lift_plan_wrappers(payload: dict[str, Any]) -> None:
     """Lift head dicts out of any wrapper key into the top-level payload.
 
-    Gemini in free-text mode tends to wrap the head dicts under a key like
-    "plan", "heads", or "sections" — sometimes all of them, sometimes just
-    the four heads with orchestration at top level. This walks one level
-    deep and lifts any sub-dict whose keys are head names into the top
-    level. Mutates payload in place.
-
-    Only lifts; never demotes. If a head already exists at top level, the
-    wrapper's version is ignored.
+    Gemini in free-text mode wraps the head dicts under varying keys
+    (`plan`, `heads`, `sections`) and sometimes prefixes them
+    (`head_receptivity`). This walks one level deep, strips `head_` prefixes,
+    and lifts any sub-dict whose keys overlap with canonical head names.
+    Mutates payload in place. Only lifts; never demotes.
     """
-    # Single pass — collect first, then mutate (avoid dict-mutated-during-iter)
+    # First pass: strip `head_` prefix on top-level keys.
+    for old_key in list(payload.keys()):
+        if old_key.startswith("head_"):
+            new_key = old_key.removeprefix("head_")
+            if new_key in _PLAN_HEAD_KEYS and new_key not in payload:
+                payload[new_key] = payload.pop(old_key)
+
+    # Second pass: lift wrappers.
     to_lift: list[str] = []
     for key, value in payload.items():
         if key in _PLAN_HEAD_KEYS:
             continue
         if not isinstance(value, dict):
             continue
-        overlap = set(value.keys()) & _PLAN_HEAD_KEYS
-        if overlap:
+        # Also strip head_ prefix on the sub-dict's keys to detect overlap
+        sub_keys = {k.removeprefix("head_") if k.startswith("head_") else k for k in value.keys()}
+        if sub_keys & _PLAN_HEAD_KEYS:
             to_lift.append(key)
     for key in to_lift:
         inner = payload.pop(key)
-        for head_name in _PLAN_HEAD_KEYS:
-            if head_name in inner and head_name not in payload:
-                payload[head_name] = inner[head_name]
+        for sub_key in list(inner.keys()):
+            canonical = sub_key.removeprefix("head_") if sub_key.startswith("head_") else sub_key
+            if canonical in _PLAN_HEAD_KEYS and canonical not in payload:
+                payload[canonical] = inner[sub_key]
 
 
 def _normalize_plan_field_aliases(payload: dict[str, Any]) -> None:
     """Coerce common field-name variations the model emits into canonical names.
 
-    Mutates payload in place. Only handles confirmed-observed variations; do
-    not generalize without eval evidence.
+    Mutates payload in place. Each rule was added in response to a real eval
+    failure; do not generalize without evidence of need. The model is
+    creative — expect this list to grow.
     """
+    # --- receptivity ---
     recept = payload.get("receptivity")
     if isinstance(recept, dict):
         if "categorical_state" not in recept and "state" in recept:
             recept["categorical_state"] = recept.pop("state")
-        if "actionability" not in recept and "actionability_granted" in recept:
-            recept["actionability"] = recept.pop("actionability_granted")
+        # actionability has been seen as: `actionability`, `actionability_granted`,
+        # `is_actionable`, plus a separate `actionability_confidence` numeric field.
+        # Truth signal is whichever boolean field is present.
+        if "actionability" not in recept:
+            for alt in ("actionability_granted", "is_actionable", "can_act_now"):
+                if alt in recept:
+                    val = recept.pop(alt)
+                    if isinstance(val, bool):
+                        recept["actionability"] = val
+                    elif isinstance(val, (int, float)):
+                        recept["actionability"] = bool(val)
+                    break
+        # Drop confidence-like fields that aren't in the schema (don't trip extra="forbid"; we use ignore by default but keep clean)
+        recept.pop("actionability_confidence", None)
+
+    # --- dynamical_state ---
     dyn = payload.get("dynamical_state")
     if isinstance(dyn, dict):
         if "current_loop_id" not in dyn and "loop_id" in dyn:
             dyn["current_loop_id"] = dyn.pop("loop_id")
         if "current_loop_label" not in dyn and "loop_label" in dyn:
             dyn["current_loop_label"] = dyn.pop("loop_label")
-    # Network: model sometimes emits `activation` per plan.schema.json
-    # description; canonical Pydantic name is `evidence_strength`.
+
+    # --- network ---
+    # Two observed variations: `activation` (per old plan.schema.json) vs canonical
+    # `evidence_strength`; `id` (terse) vs canonical `node_id`.
+    # candidate_patterns: `type` vs canonical `pattern_type`.
     net = payload.get("network")
     if isinstance(net, dict):
         for node in net.get("active_nodes") or []:
-            if isinstance(node, dict) and "evidence_strength" not in node and "activation" in node:
+            if not isinstance(node, dict):
+                continue
+            if "evidence_strength" not in node and "activation" in node:
                 node["evidence_strength"] = node.pop("activation")
+            if "node_id" not in node and "id" in node:
+                node["node_id"] = node.pop("id")
+        for cp in net.get("candidate_patterns") or []:
+            if not isinstance(cp, dict):
+                continue
+            if "pattern_type" not in cp and "type" in cp:
+                cp["pattern_type"] = cp.pop("type")
+            # Some captures put evidence under `evidence` or `involved_nodes`
+            # instead of `evidence_utterance_ids`. Drop to avoid extras-tripping.
+            cp.pop("evidence", None)
+            cp.pop("involved_nodes", None)
+            cp.pop("id", None)
+
+    # --- sdt ---
+    # thwarted_in has been seen as both dicts {need, domain} and lists [need, domain].
+    sdt = payload.get("sdt")
+    if isinstance(sdt, dict):
+        thwarted = sdt.get("thwarted_in")
+        if isinstance(thwarted, list):
+            normalized: list[dict[str, Any]] = []
+            for item in thwarted:
+                if isinstance(item, dict):
+                    normalized.append(item)
+                elif isinstance(item, (list, tuple)) and len(item) >= 2:
+                    normalized.append({"need": item[0], "domain": item[1]})
+                # else: skip unrecognized shape
+            sdt["thwarted_in"] = normalized
+
+    # --- orchestration ---
+    # safety_flags has been seen as: list[str] (canonical), single str, dict-with-flags-key,
+    # or null. Coerce to list[str].
+    orch = payload.get("orchestration")
+    if isinstance(orch, dict):
+        sf = orch.get("safety_flags")
+        if sf is None:
+            orch["safety_flags"] = []
+        elif isinstance(sf, str):
+            orch["safety_flags"] = [sf] if sf else []
+        elif isinstance(sf, dict):
+            # E.g. {"active_suicidal_ideation": true, ...}
+            orch["safety_flags"] = [k for k, v in sf.items() if v]
 
 
 def _extract_first_json_object(text: str) -> str | None:

@@ -15,6 +15,66 @@
 =============================================================== #}
 You are the reasoning step of a reflective journaling pipeline. You emit a JSON plan that scaffolds the generation step. You are not the response model. The user never sees what you write.
 
+# Mandatory output shape — copy this exactly
+
+Your response MUST be a single JSON object with EXACTLY these top-level keys, in this order, with EXACTLY these field names. Do NOT wrap any of this under a "plan" or "heads" key. Do NOT prefix head names with "head_". Do NOT invent new field names. Do NOT add fields outside this shape.
+
+```json
+{
+  "schema_version": "1.0.0",
+  "turn_id": "",
+  "produced_at": "<ISO-8601 UTC, copy from current_datetime_iso input>",
+  "model_id": "gemini-2.5-pro",
+  "prompt_template_version": "2.0.0",
+  "receptivity": {
+    "rationale": "<your CoT, citing utterance evidence>",
+    "score": <float 0..1>,
+    "categorical_state": "<one of: open_to_reflection|active_distress|crisis|dissociated_or_disengaged|seeking_practical_support>",
+    "actionability": <bool>
+  },
+  "dynamical_state": {
+    "rationale": "<your CoT>",
+    "current_loop_id": <string or null>,
+    "current_loop_label": <string or null>,
+    "stability": <float 0..1>,
+    "transition_signals": [<string>, ...],
+    "posture": "<one of: interrupt|support|consolidate|none>"
+  },
+  "network": {
+    "rationale": "<your CoT>",
+    "active_nodes": [ {"node_id": "<vocab id>", "evidence_strength": <float 0..1>} ],
+    "active_edges": [ {"from": "<id>", "to": "<id>", "strength": <float 0..1>} ],
+    "upstream_target_node_id": <string or null>,
+    "candidate_patterns": [ {"pattern_type": "<one of: pattern|echo|shift|context>", "summary": "<string>", "evidence_utterance_ids": [<id>, ...], "confidence": <float 0..1>} ]
+  },
+  "sdt": {
+    "rationale": "<your CoT>",
+    "thwarted_in": [ {"need": "<one of: autonomy|competence|relatedness>", "domain": "<vocab domain id>", "confidence": <float 0..1>} ],
+    "substitute_behaviors": [ {"behavior_id": "<vocab id>", "serves_need": "<need>", "serves_domain": "<domain>", "confidence": <float 0..1>} ],
+    "framing_language_hint": <string or null>
+  },
+  "orchestration": {
+    "rationale": "<your CoT for intensity + safety_flags decisions>",
+    "intervention_intensity": "<one of: none|presence|light_reflection|pattern_surfacing|direct_invitation>",
+    "safety_flags": [<one or more of: active_suicidal_ideation|self_harm_intent|medical_instability|asking_for_methods|asking_for_numbers|egosyntonic_collusion_risk|boundary_disclosure_needed>],
+    "content_focus": {"node_id": <string or null>, "pattern_index": <integer or null>} ,
+    "framing_language": {"sdt_need_language": <string or null>, "user_register_excerpts": [<string>, ...]},
+    "memory_references": [ {"ref_type": "<utterance|behavior_log|summary>", "ref_id": "<id>"} ]
+  }
+}
+```
+
+Field-name reminders the model has gotten wrong before — do not repeat these:
+- `categorical_state`, NOT `state`.
+- `actionability`, NOT `actionability_granted`, NOT `is_actionable`, NOT `actionability_confidence`.
+- `active_nodes[].node_id` and `active_nodes[].evidence_strength` — NOT `id`, NOT `activation`.
+- `candidate_patterns[].pattern_type` — NOT `type`.
+- `thwarted_in[]` items are OBJECTS with `need` and `domain` keys — NOT arrays like `["autonomy", "work"]`.
+- `safety_flags` is an array of strings. NOT a dict, not a single string.
+- Head sections are TOP-LEVEL — no `plan` or `heads` wrapper.
+
+Return ONLY the JSON. No prose before or after. No code fences. No comments.
+
 # Core instruction — rationale-first generation
 
 Every head and orchestration section has a `rationale` field FIRST in the schema. You MUST:
