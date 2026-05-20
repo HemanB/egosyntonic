@@ -31,6 +31,7 @@ from pathlib import Path
 from typing import Any
 
 from ..config import Settings, get_settings
+from ..llm import get_call_metas, reset_call_metas
 from ..logging_setup import configure_logging, get_logger
 from ..pipeline import critic, extraction, generation, reasoning
 from ..pipeline.types import (
@@ -82,7 +83,46 @@ class FixtureResult:
     critic_flags: list[str]
     response_text: str
     extraction_summary: dict[str, Any]
+    total_input_tokens: int = 0
+    total_output_tokens: int = 0
+    total_thoughts_tokens: int = 0
+    call_count: int = 0
+    estimated_cost_usd: float = 0.0
     error: str | None = None
+
+
+# Public Gemini 2.5 Flash pricing as of early 2026. Input $0.075/M, output
+# $0.30/M (thinking tokens billed within output, no separate surcharge).
+# Update here if rates change.
+_FLASH_INPUT_PRICE_PER_M = 0.075
+_FLASH_OUTPUT_PRICE_PER_M = 0.30
+_PRO_INPUT_PRICE_PER_M = 1.25
+_PRO_OUTPUT_PRICE_PER_M = 5.00
+
+
+def _price_per_million(model_id: str) -> tuple[float, float]:
+    """Return (input_price, output_price) per million tokens for a given
+    model ID. Conservative: unknown models priced as Pro."""
+    mid = model_id.lower()
+    if "flash" in mid:
+        return _FLASH_INPUT_PRICE_PER_M, _FLASH_OUTPUT_PRICE_PER_M
+    return _PRO_INPUT_PRICE_PER_M, _PRO_OUTPUT_PRICE_PER_M
+
+
+def _compute_cost(metas: list) -> tuple[int, int, int, int, float]:
+    """Sum input/output/thoughts tokens and dollar cost across CallMetas."""
+    inp = out = tho = 0
+    cost = 0.0
+    for m in metas:
+        i = m.input_tokens or 0
+        o = m.output_tokens or 0
+        t = m.thoughts_tokens or 0
+        in_price, out_price = _price_per_million(m.model_id)
+        cost += (i * in_price + o * out_price) / 1_000_000.0
+        inp += i
+        out += o
+        tho += t
+    return inp, out, tho, len(metas), cost
 
 
 # --- Pipeline driver that respects fixture-supplied state ---
@@ -434,6 +474,7 @@ async def _run_one(
     fixture = json.loads(fixture_path.read_text())
     fixture_id = fixture["fixture_id"]
     category = fixture.get("category", "unknown")
+    reset_call_metas()
     try:
         (
             response_text,
@@ -446,6 +487,7 @@ async def _run_one(
         ) = await _run_fixture(fixture, settings)
     except Exception as exc:  # noqa: BLE001
         log.exception("fixture_run_failed", fixture_id=fixture_id)
+        inp, out, tho, n_calls, cost = _compute_cost(get_call_metas())
         return FixtureResult(
             fixture_id=fixture_id,
             category=category,
@@ -467,6 +509,11 @@ async def _run_one(
             critic_flags=[],
             response_text="",
             extraction_summary={},
+            total_input_tokens=inp,
+            total_output_tokens=out,
+            total_thoughts_tokens=tho,
+            call_count=n_calls,
+            estimated_cost_usd=cost,
             error=str(exc),
         )
 
@@ -479,6 +526,7 @@ async def _run_one(
         used_safety_template,
     )
     passed = all(a[1] for a in assertions)
+    inp, out, tho, n_calls, cost = _compute_cost(get_call_metas())
 
     return FixtureResult(
         fixture_id=fixture_id,
@@ -501,6 +549,11 @@ async def _run_one(
         critic_flags=list(verdict.flags),
         response_text=response_text,
         extraction_summary=extraction_summary,
+        total_input_tokens=inp,
+        total_output_tokens=out,
+        total_thoughts_tokens=tho,
+        call_count=n_calls,
+        estimated_cost_usd=cost,
     )
 
 
@@ -566,6 +619,11 @@ async def main(filter_substr: str | None = None) -> int:
                 "critic_flags": r.critic_flags,
                 "response_text": r.response_text,
                 "extraction_summary": r.extraction_summary,
+                "total_input_tokens": r.total_input_tokens,
+                "total_output_tokens": r.total_output_tokens,
+                "total_thoughts_tokens": r.total_thoughts_tokens,
+                "call_count": r.call_count,
+                "estimated_cost_usd": r.estimated_cost_usd,
                 "error": r.error,
             }) + "\n")
 
@@ -612,6 +670,28 @@ def _write_report(path: Path, results: list[FixtureResult], elapsed_s: float) ->
         p50 = latencies[len(latencies) // 2]
         p95 = latencies[int(len(latencies) * 0.95)]
         md += ["", f"**Latency** — p50 {p50}ms, p95 {p95}ms", ""]
+
+    # Token usage + cost (real numbers from Gemini's usage_metadata)
+    total_input = sum(r.total_input_tokens for r in results)
+    total_output = sum(r.total_output_tokens for r in results)
+    total_thoughts = sum(r.total_thoughts_tokens for r in results)
+    total_calls = sum(r.call_count for r in results)
+    total_cost = sum(r.estimated_cost_usd for r in results)
+    llm_driven = [r for r in results if r.call_count > 0]
+    avg_cost_per_turn = total_cost / max(len(llm_driven), 1)
+    md += [
+        "## Tokens & cost (this run)",
+        "",
+        f"- Total LLM calls: **{total_calls}** across {len(llm_driven)} LLM-driven fixtures",
+        f"- Input tokens: **{total_input:,}** ({total_input / max(len(llm_driven), 1):,.0f} avg/turn)",
+        f"- Output tokens: **{total_output:,}** ({total_output / max(len(llm_driven), 1):,.0f} avg/turn)",
+        f"- Of which thinking tokens: **{total_thoughts:,}** ({total_thoughts / max(total_output, 1):.0%} of output)",
+        f"- **Estimated total cost: ${total_cost:.4f}**",
+        f"- **Avg cost per LLM-driven turn: ${avg_cost_per_turn:.5f}**",
+        "",
+        "_Pricing model: Gemini 2.5 Flash $0.075/M input, $0.30/M output (thinking billed within output). Pro $1.25/M input, $5.00/M output. Update `_FLASH_*_PRICE_PER_M` / `_PRO_*_PRICE_PER_M` constants in `run_golden.py` if rates change._",
+        "",
+    ]
 
     # Detail per fixture
     md += ["", "## Per-fixture detail", ""]

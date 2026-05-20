@@ -101,6 +101,30 @@ class CallMeta:
     latency_ms: int
     input_tokens: int | None = None
     output_tokens: int | None = None
+    thoughts_tokens: int | None = None  # thinking tokens; counted within output
+
+
+# --- Per-fixture token accounting ---
+#
+# llm.py accumulates a CallMeta for every call to call_structured / call_text
+# into `_recent_call_metas`. The eval runner (or any caller) can clear the
+# list before a logical operation and read it after to get a per-operation
+# breakdown of token usage. Not thread-safe — the eval is sequential. If we
+# ever go concurrent, swap for contextvars.
+
+_recent_call_metas: list[CallMeta] = []
+
+
+def reset_call_metas() -> None:
+    """Clear the running list of CallMetas. Call before a logical operation
+    you want to measure (e.g., one fixture run)."""
+    _recent_call_metas.clear()
+
+
+def get_call_metas() -> list[CallMeta]:
+    """Return a copy of the CallMetas accumulated since the last
+    reset_call_metas() call."""
+    return list(_recent_call_metas)
 
 
 async def call_structured(
@@ -206,7 +230,9 @@ async def call_structured(
         latency_ms=latency_ms,
         input_tokens=getattr(usage, "prompt_token_count", None) if usage else None,
         output_tokens=getattr(usage, "candidates_token_count", None) if usage else None,
+        thoughts_tokens=getattr(usage, "thoughts_token_count", None) if usage else None,
     )
+    _recent_call_metas.append(meta)
     log.debug(
         "structured_call_complete",
         model=model_id,
@@ -214,6 +240,7 @@ async def call_structured(
         latency_ms=latency_ms,
         input_tokens=meta.input_tokens,
         output_tokens=meta.output_tokens,
+        thoughts_tokens=meta.thoughts_tokens,
     )
     return parsed, meta
 
@@ -242,7 +269,9 @@ async def call_text(
         latency_ms=latency_ms,
         input_tokens=getattr(usage, "prompt_token_count", None) if usage else None,
         output_tokens=getattr(usage, "candidates_token_count", None) if usage else None,
+        thoughts_tokens=getattr(usage, "thoughts_token_count", None) if usage else None,
     )
+    _recent_call_metas.append(meta)
     return text, meta
 
 
