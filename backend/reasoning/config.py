@@ -29,8 +29,14 @@ class Settings(BaseSettings):
 
     gemini_api_key: str | None = Field(default=None, alias="GEMINI_API_KEY")
 
-    model_reasoning: str = Field(default="gemini-2.5-pro", alias="EGOSYN_MODEL_REASONING")
-    model_critic: str = Field(default="gemini-2.5-pro", alias="EGOSYN_MODEL_CRITIC")
+    # All pipeline stages default to Gemini 2.5 Flash with thinking ON.
+    # Per ADR-0004: Pro vs Flash A/B showed +1 fixture (12/15 → 11/15) and
+    # ~25% latency penalty for Pro at ~10x the cost. Flash with thinking
+    # holds equivalent quality on every fixture except low-receptivity-
+    # dissociation, which is a low-stakes case. Override per-stage via env
+    # vars if a specific call shows quality regression.
+    model_reasoning: str = Field(default="gemini-2.5-flash", alias="EGOSYN_MODEL_REASONING")
+    model_critic: str = Field(default="gemini-2.5-flash", alias="EGOSYN_MODEL_CRITIC")
     model_extraction: str = Field(default="gemini-2.5-flash", alias="EGOSYN_MODEL_EXTRACTION")
     model_generation: str = Field(default="gemini-2.5-flash", alias="EGOSYN_MODEL_GENERATION")
 
@@ -42,6 +48,11 @@ class Settings(BaseSettings):
 
     log_level: str = Field(default="INFO", alias="LOG_LEVEL")
     otel_enabled: bool = Field(default=False, alias="EGOSYN_OTEL_ENABLED")
+
+    # Thinking budget for Gemini 2.5 models. None = SDK/model default (thinking
+    # on, model picks budget). 0 = disable thinking entirely (massive speedup,
+    # quality TBD). Positive int = cap thinking tokens at that count.
+    thinking_budget: int | None = Field(default=None, alias="EGOSYN_THINKING_BUDGET")
 
     dev_auth_bypass: bool = Field(default=False, alias="EGOSYN_DEV_AUTH_BYPASS")
     dev_bypass_user_id: str = Field(default="local-dev-user", alias="EGOSYN_DEV_BYPASS_USER_ID")

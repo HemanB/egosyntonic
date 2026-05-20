@@ -139,6 +139,11 @@ async def call_structured(
         if response_schema is not None:
             config["response_schema"] = response_schema
 
+    # Thinking budget — only meaningful on Gemini 2.5 models. None means SDK
+    # default (thinking on). 0 means thinking off. Set via EGOSYN_THINKING_BUDGET.
+    if settings.thinking_budget is not None:
+        config["thinking_config"] = {"thinking_budget": settings.thinking_budget}
+
     response = client.models.generate_content(
         model=model_id,
         contents=prompt.body,
