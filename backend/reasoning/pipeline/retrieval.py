@@ -78,6 +78,7 @@ async def _retrieve_one_head(
 ) -> list[RetrievedItem]:
     """Run a single FindNearest query for one head against the utterances
     collection, prefix-filtered by user_id."""
+    from google.cloud.firestore_v1.base_query import FieldFilter  # noqa: PLC0415
     from google.cloud.firestore_v1.base_vector_query import DistanceMeasure  # noqa: PLC0415
     from google.cloud.firestore_v1.vector import Vector  # noqa: PLC0415
 
@@ -85,7 +86,7 @@ async def _retrieve_one_head(
 
     db = get_client(settings)
     collection = db.collection(settings.utterances_collection)
-    query = collection.where("user_id", "==", user_id).find_nearest(
+    query = collection.where(filter=FieldFilter("user_id", "==", user_id)).find_nearest(
         vector_field="embedding",
         query_vector=Vector(embedding),
         limit=_PER_HEAD_LIMIT,
