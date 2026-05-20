@@ -8,6 +8,7 @@ template ID.
 
 from __future__ import annotations
 
+import asyncio
 import json
 import time
 from dataclasses import dataclass
@@ -144,11 +145,7 @@ async def call_structured(
     if settings.thinking_budget is not None:
         config["thinking_config"] = {"thinking_budget": settings.thinking_budget}
 
-    response = client.models.generate_content(
-        model=model_id,
-        contents=prompt.body,
-        config=config,
-    )
+    response = await _call_with_retry(client, model_id, prompt, config)
     latency_ms = int((time.perf_counter() - started) * 1000)
 
     raw_text = (response.text or "").strip()
@@ -230,10 +227,7 @@ async def call_text(
     client = _get_client(settings)
     started = time.perf_counter()
 
-    response = client.models.generate_content(
-        model=model_id,
-        contents=prompt.body,
-    )
+    response = await _call_with_retry(client, model_id, prompt, config=None)
     latency_ms = int((time.perf_counter() - started) * 1000)
 
     text = (response.text or "").strip()
@@ -380,6 +374,56 @@ def _normalize_plan_field_aliases(payload: dict[str, Any]) -> None:
         elif isinstance(sf, dict):
             # E.g. {"active_suicidal_ideation": true, ...}
             orch["safety_flags"] = [k for k, v in sf.items() if v]
+
+
+async def _call_with_retry(
+    client: Any,
+    model_id: str,
+    prompt: RenderedPrompt,
+    config: dict[str, Any] | None,
+    *,
+    max_attempts: int = 3,
+    base_delay_s: float = 1.0,
+) -> Any:
+    """Call Gemini with exponential-backoff retry on transient errors.
+
+    Retries on:
+    - HTTP 503 UNAVAILABLE (model capacity spike — common during evals)
+    - HTTP 429 RESOURCE_EXHAUSTED (rate limit)
+    - HTTP 500 INTERNAL (transient server-side errors)
+
+    Does NOT retry on 4xx other than 429 (those are caller-fault). Does
+    NOT retry on safety-filter blocks (those are content-driven, not
+    transient). The retryable-error detection is best-effort string match
+    on the exception's repr — Gemini SDK doesn't expose typed exceptions
+    consistently across versions.
+    """
+    retryable_markers = ("503", "UNAVAILABLE", "429", "RESOURCE_EXHAUSTED", "500 INTERNAL")
+    last_exc: Exception | None = None
+    for attempt in range(max_attempts):
+        try:
+            kwargs = {"model": model_id, "contents": prompt.body}
+            if config is not None:
+                kwargs["config"] = config
+            return client.models.generate_content(**kwargs)
+        except Exception as exc:  # noqa: BLE001
+            last_exc = exc
+            err_repr = repr(exc)
+            is_retryable = any(marker in err_repr for marker in retryable_markers)
+            if not is_retryable or attempt == max_attempts - 1:
+                raise
+            delay = base_delay_s * (2 ** attempt)
+            log.warning(
+                "gemini_call_retrying",
+                model=model_id,
+                template=prompt.template_id,
+                attempt=attempt + 1,
+                delay_s=delay,
+                error=err_repr[:200],
+            )
+            await asyncio.sleep(delay)
+    # Unreachable but keeps type-checkers happy
+    raise last_exc if last_exc else RuntimeError("call_with_retry exhausted attempts")
 
 
 def _extract_first_json_object(text: str) -> str | None:

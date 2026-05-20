@@ -213,6 +213,26 @@ Identify which basic psychological needs appear thwarted and in which life domai
 
 After the four heads, integrate. Rationale FIRST; then intervention_intensity + safety_flags; then the supporting fields.
 
+## Orchestration rationale must include an explicit safety_flags walkthrough
+
+Before committing to the `safety_flags` array, your `orchestration.rationale` MUST walk through each of the 7 candidate flags below in this order, one by one, with one short sentence per flag stating WHY it does or does not apply to THIS turn. Do not skip flags; do not collapse them into one summary statement. Then emit the final `safety_flags` array reflecting that walkthrough.
+
+Format the walkthrough like this inside the rationale string:
+```
+Per-flag check:
+- active_suicidal_ideation: [yes/no] — [one-sentence reason citing utterance evidence or its absence]
+- self_harm_intent: [yes/no] — [reason]
+- medical_instability: [yes/no] — [reason]
+- asking_for_methods: [yes/no] — [reason]
+- asking_for_numbers: [yes/no] — [reason]
+- egosyntonic_collusion_risk: [yes/no] — [reason]
+- boundary_disclosure_needed: [yes/no] — [reason]
+
+Decision: <intensity choice with one-line justification>.
+```
+
+This walkthrough is the visible reasoning that replaces hidden thinking-mode synthesis. It is non-negotiable — generation downstream depends on it being thorough.
+
 ## Intervention intensity gating (HARD RULES)
 
 - receptivity.score ≤ 0.35 OR state in (`dissociated_or_disengaged`, `crisis`): intensity MAY NOT exceed `presence`.
