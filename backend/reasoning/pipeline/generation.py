@@ -3,6 +3,11 @@
 Generation receives the plan and produces user-facing text. Writes in the
 user's register, references surfaced memories naturally, avoids clinical
 jargon. When a safety template is provided, it is used VERBATIM.
+
+ADR-0006: thinking is disabled on this stage (thinking_budget=0). The
+critic's per-issue feedback (verbatim phrases + fix hints) is threaded
+through `critic_issues` on regeneration so the regen prompt does
+targeted revision rather than re-rolling.
 """
 
 from __future__ import annotations
@@ -10,7 +15,7 @@ from __future__ import annotations
 from ..config import Settings
 from ..llm import call_text, render_prompt
 from ..logging_setup import get_logger
-from .types import GenerationOutput, ReasoningPlan, TurnInput
+from .types import CriticIssue, GenerationOutput, ReasoningPlan, TurnInput
 
 log = get_logger(__name__)
 
@@ -23,7 +28,9 @@ async def generate(
     plan: ReasoningPlan,
     settings: Settings,
     *,
+    critic_issues: list[CriticIssue] | None = None,
     critic_notes: str | None = None,
+    previous_draft: str | None = None,
     safety_template: str | None = None,
     user_register_excerpts: list[str] | None = None,
     surfaced_memories: list[dict[str, str]] | None = None,
@@ -47,10 +54,17 @@ async def generate(
         surfaced_memories=surfaced_memories or [],
         safety_template="",
         critic_notes=critic_notes or "",
+        critic_issues=[i.model_dump() for i in (critic_issues or [])],
+        previous_draft=previous_draft or "",
     )
 
     try:
-        text, meta = await call_text(settings.model_generation, prompt, settings)
+        # ADR-0006: thinking off on generation. The critic loop is the
+        # supervision; thinking-time is redundant when we have a tight
+        # feedback loop. Saves ~5-10s per regen attempt.
+        text, meta = await call_text(
+            settings.model_generation, prompt, settings, thinking_budget=0,
+        )
     except Exception:
         log.exception("generation_live_call_failed_falling_back_to_presence")
         return GenerationOutput(response_text=PRESENCE_FALLBACK, surfaced_memory_ref_ids=[])
@@ -62,7 +76,12 @@ async def generate(
         log.warning("generation_returned_empty_body")
         return GenerationOutput(response_text=PRESENCE_FALLBACK, surfaced_memory_ref_ids=[])
 
-    log.debug("generation_complete", chars=len(text), latency_ms=meta.latency_ms)
+    log.debug(
+        "generation_complete",
+        chars=len(text),
+        latency_ms=meta.latency_ms,
+        regen=bool(critic_issues),
+    )
     return GenerationOutput(
         response_text=text,
         surfaced_memory_ref_ids=plan.orchestration.memory_reference_ids,

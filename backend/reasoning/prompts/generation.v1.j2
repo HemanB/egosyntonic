@@ -57,6 +57,26 @@ Output the template above and nothing else. The critic verifies verbatim use.
 Begin.
 
 {%- else -%}
+{% if critic_issues and critic_issues|length > 0 -%}
+# REVISION MODE — a previous draft failed the critic
+
+The critic flagged your previous draft. Read its feedback, then produce a NEW response that fixes the SPECIFIC issues below. Do not regenerate from scratch; preserve everything that wasn't flagged, change only what was.
+
+Previous draft:
+"""
+{{ previous_draft }}
+"""
+
+Issues flagged by the critic (each one is a specific defect — fix each):
+{% for issue in critic_issues -%}
+- **Phrase**: "{{ issue.phrase }}"
+  - **Why it's a problem**: {{ issue.why }}
+  - **Fix**: {{ issue.fix_hint }}
+{% endfor %}
+
+Output ONLY the revised response. Same writing rules below apply — re-read them. After your revision, before emitting, verify each flagged phrase is gone or reworded.
+
+{% endif -%}
 # Writing rules
 
 1. **No clinical language. Ever.** Forbidden vocabulary, both as words and as concepts paraphrased:

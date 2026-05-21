@@ -327,14 +327,33 @@ async def _generate_with_critic_loop(
     plan: ReasoningPlan,
     settings: Settings,
 ) -> tuple[GenerationOutput, CriticVerdict, int]:
+    """LLM-on-LLM supervision loop (ADR-0006).
+
+    Generation writes; critic emits structured per-issue feedback; regen
+    receives those specific issues + the previous draft and does a
+    targeted revise. Both generation and critic run thinking-off — the
+    supervision loop is the engineered substitute for hidden internal
+    thinking.
+    """
     generated = await generation.generate(turn, plan, settings)
     verdict = await critic.audit(turn, plan, generated, settings)
     attempts = 0
     while not verdict.passed and attempts < MAX_REGENERATIONS:
         attempts += 1
-        log.warning("critic_regeneration", attempt=attempts, flags=verdict.flags)
+        log.warning(
+            "critic_regeneration",
+            attempt=attempts,
+            flags=verdict.flags,
+            issue_count=len(verdict.issues),
+        )
+        previous_draft = generated.response_text
         generated = await generation.generate(
-            turn, plan, settings, critic_notes=verdict.notes
+            turn,
+            plan,
+            settings,
+            critic_issues=verdict.issues,
+            critic_notes=verdict.notes,
+            previous_draft=previous_draft,
         )
         verdict = await critic.audit(turn, plan, generated, settings)
     if not verdict.passed:

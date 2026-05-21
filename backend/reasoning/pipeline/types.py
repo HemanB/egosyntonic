@@ -233,9 +233,24 @@ CriticFlag = Literal[
 ]
 
 
+class CriticIssue(BaseModel):
+    """A specific defect in a generated response, surfaced by the critic.
+
+    The phrase + fix_hint pair is the load-bearing structure for the LLM-on-
+    LLM supervision loop: on regeneration, the generation prompt sees each
+    issue as a targeted revise instruction ("replace this exact phrase with
+    something that does this instead") rather than a generic re-roll.
+    """
+
+    phrase: str = Field(description="The exact verbatim text from the response that is problematic (≤30 words).")
+    why: str = Field(description="One-sentence explanation of why this phrase is a problem.")
+    fix_hint: str = Field(description="Brief suggestion for what to do instead.")
+
+
 class CriticVerdict(BaseModel):
     passed: bool
     flags: list[CriticFlag] = Field(default_factory=list)
+    issues: list[CriticIssue] = Field(default_factory=list)
     notes: str = ""
 
 

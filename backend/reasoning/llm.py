@@ -135,6 +135,7 @@ async def call_structured(
     *,
     response_schema: dict[str, Any] | None = None,
     free_text_mode: bool = False,
+    thinking_budget: int | None = None,
 ) -> tuple[T, CallMeta]:
     """Call Gemini and parse the response into `response_model`.
 
@@ -164,10 +165,12 @@ async def call_structured(
         if response_schema is not None:
             config["response_schema"] = response_schema
 
-    # Thinking budget — only meaningful on Gemini 2.5 models. None means SDK
-    # default (thinking on). 0 means thinking off. Set via EGOSYN_THINKING_BUDGET.
-    if settings.thinking_budget is not None:
-        config["thinking_config"] = {"thinking_budget": settings.thinking_budget}
+    # Thinking budget — only meaningful on Gemini 2.5 models. Per-call
+    # override wins over the settings default; settings.thinking_budget is
+    # the global fallback (None = SDK default, thinking on; 0 = off).
+    effective_budget = thinking_budget if thinking_budget is not None else settings.thinking_budget
+    if effective_budget is not None:
+        config["thinking_config"] = {"thinking_budget": effective_budget}
 
     response = await _call_with_retry(client, model_id, prompt, config)
     latency_ms = int((time.perf_counter() - started) * 1000)
@@ -249,12 +252,19 @@ async def call_text(
     model_id: str,
     prompt: RenderedPrompt,
     settings: Settings,
+    *,
+    thinking_budget: int | None = None,
 ) -> tuple[str, CallMeta]:
     """Free-text generation. Used by the generation stage."""
     client = _get_client(settings)
     started = time.perf_counter()
 
-    response = await _call_with_retry(client, model_id, prompt, config=None)
+    effective_budget = thinking_budget if thinking_budget is not None else settings.thinking_budget
+    config: dict[str, Any] | None = None
+    if effective_budget is not None:
+        config = {"thinking_config": {"thinking_budget": effective_budget}}
+
+    response = await _call_with_retry(client, model_id, prompt, config=config)
     latency_ms = int((time.perf_counter() - started) * 1000)
 
     text = (response.text or "").strip()

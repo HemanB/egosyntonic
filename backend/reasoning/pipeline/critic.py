@@ -57,11 +57,15 @@ async def audit(
     )
 
     try:
+        # ADR-0006: thinking off on critic. The critic's job is structured
+        # pattern-matching against a fixed checklist + emitting per-issue
+        # feedback; no internal deliberation needed. Saves ~5-10s per call.
         verdict, meta = await call_structured(
             settings.model_critic,
             prompt,
             CriticVerdict,
             settings,
+            thinking_budget=0,
         )
     except Exception:
         log.exception("critic_live_call_failed_passing_through")
@@ -72,6 +76,7 @@ async def audit(
         "critic_complete",
         passed=verdict.passed,
         flags=verdict.flags,
+        issue_count=len(verdict.issues),
         latency_ms=meta.latency_ms,
     )
     return verdict
